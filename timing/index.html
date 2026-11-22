@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>视频时序计算器 — CEA-861 / VESA DMT / HDMI / DP</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --bg:#f4f6f9;--card:#fff;--bd:#dde3ea;--tx:#1f2a36;--tx2:#5b6b7c;--tx3:#8b98a6;
+  --acc:#1e6fd9;--ok:#1a7f4b;--warn:#c77700;--bad:#c0392b;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+header{background:#fff;border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:baseline;gap:12px;position:sticky;top:0;z-index:10}
+header h1{font-size:16px;margin:0;font-weight:700}
+header .sub{font-size:12px;color:var(--tx3)}
+header .right{margin-left:auto;font-size:12px;color:var(--tx3)}
+main{max-width:1240px;margin:0 auto;padding:16px 20px 60px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:13px;font-weight:700;margin:0 0 10px;color:var(--tx2);letter-spacing:.04em}
+.card h2 .hint{font-weight:400;color:var(--tx3);letter-spacing:0}
+#qrow{display:flex;gap:8px;align-items:center}
+#q{flex:1 1 auto;font:16px var(--mono);padding:9px 12px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx)}
+#q:focus{outline:2px solid #cfe2fb;border-color:var(--acc)}
+button{font:13px ui-monospace,var(--mono);padding:7px 12px;border:1px solid var(--bd);background:#fff;border-radius:7px;cursor:pointer;color:var(--tx)}
+button:hover{border-color:var(--acc);color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.pri:hover{background:#1a5fbb;color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font:12px var(--mono);padding:3px 9px;border:1px solid var(--bd);border-radius:99px;background:#f8fafc;cursor:pointer;color:var(--tx2)}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.msg{margin-top:8px;font-size:12.5px;min-height:18px;color:var(--tx2)}
+.msg .bad{color:var(--bad)}
+.bigrow{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline;margin-bottom:12px}
+.big{display:flex;flex-direction:column}
+.big b{font:700 26px/1.1 var(--mono);letter-spacing:-.5px}
+.big span{font-size:11.5px;color:var(--tx3);letter-spacing:.04em;margin-top:3px}
+.big.acc b{color:var(--acc)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+table.t{border-collapse:collapse;width:100%;font:12.5px var(--mono)}
+table.t th,table.t td{border-bottom:1px solid #eef2f6;padding:4px 8px;text-align:right}
+table.t th{color:var(--tx3);font-weight:500;font-size:11.5px}
+table.t td:first-child,table.t th:first-child{text-align:left;color:var(--tx2);font-family:inherit;font-size:12px}
+table.t tr.tot td{border-top:2px solid var(--bd);font-weight:700;border-bottom:0}
+.badge{display:inline-block;font:11.5px var(--mono);padding:1px 7px;border-radius:5px;margin-left:6px}
+.nw{display:inline-block;min-width:62px;text-align:right;font-variant-numeric:tabular-nums;margin-right:8px;opacity:.75}
+.b-ok{background:#e6f5ec;color:var(--ok)}
+.b-warn{background:#fdf1dd;color:var(--warn)}
+.b-bad{background:#fbe9e7;color:var(--bad)}
+.b-n{background:#eef2f7;color:var(--tx2)}
+.bw{display:flex;flex-direction:column;gap:9px}
+.bwrow{display:flex;align-items:center;gap:10px;font-size:12.5px}
+.bwrow .lbl{width:92px;flex:0 0 auto;color:var(--tx2)}
+.bwrow .bar{flex:1 1 auto;height:9px;background:#eef2f7;border-radius:99px;overflow:hidden;position:relative}
+.bwrow .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+.bwrow .val{width:180px;flex:0 0 auto;text-align:right;font-family:var(--mono);font-size:12px;color:var(--tx2)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.kv dt{color:var(--tx3)}
+.kv dd{margin:0;font-family:var(--mono)}
+.footbar{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;margin-top:10px;min-width:0}
+.footbar .fhint{flex:1 1 auto;min-width:0;font-size:12px;color:var(--tx3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.footbar #cvtSwitch{flex:0 0 auto;display:flex;align-items:center}
+.footbar button{flex:0 0 auto;white-space:nowrap}
+pre.out{background:#0f1720;color:#dbe6f0;padding:12px;border-radius:8px;overflow:auto;font:12px/1.5 var(--mono);margin:8px 0 0}
+.hint{color:var(--tx3);font-size:12px}
+
+/* ---- 统一 header（三页共用） ---- */
+header{background:#16324f;color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20}
+header h1{margin:0;font-size:16px;font-weight:600;color:#fff;letter-spacing:0}
+header .sub{font-size:12.5px;opacity:.72;font-weight:400}
+header .nav{margin-left:auto;display:flex;gap:16px;align-items:baseline}
+header .nav a{color:#fff;opacity:.82;text-decoration:none;font-size:13px}
+header .nav a:hover{opacity:1;text-decoration:underline}
+header .nav a.cur{opacity:.5;cursor:default}
+header .nav a.cur:hover{text-decoration:none}
+</style>
+</head>
+<body>
+<header><h1>视频时序计算器</h1><span class="sub">CEA-861-F/G · VESA DMT · HDMI 2.0/2.1 · DP 2.1</span><span class="nav"><a href="../edid/">EDID 数据库</a><a href="../dpcd/">DPCD 速查</a><a href="../timing/" class="cur">时序计算器</a><a href="../">首页</a></span></header>
+
+<main>
+  <div class="card">
+    <h2>输入 <span class="hint">— 一行搞定：3840x2160p60 / 4K60 / 1080i50 / VIC 97 / 2560x1440@60；加 <b>cvt</b> / <b>rb</b> / <b>rb2</b> / <b>rb3</b> 强制按 VESA CVT 公式算</span></h2>
+    <div id="qrow">
+      <input id="q" placeholder="3840x2160p60" autocomplete="off" spellcheck="false">
+      <button class="pri" onclick="run()">计算</button>
+      <button onclick="clearAll()">清空</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card" id="resCard" style="display:none">
+    <h2>时序 <span class="hint" id="srcHint"></span></h2>
+    <div class="bigrow">
+      <div class="big acc"><b id="bPclk">—</b><span>像素时钟 MHz</span></div>
+      <div class="big"><b id="bHf">—</b><span>行频 kHz</span></div>
+      <div class="big"><b id="bVf">—</b><span>场频 Hz</span></div>
+      <div class="big"><b id="bBw">—</b><span>像素率 Gbit/s @8bpc RGB</span></div>
+    </div>
+    <div class="grid2">
+      <table class="t" id="tH"></table>
+      <table class="t" id="tV"></table>
+    </div>
+    <div class="footbar">
+      <span class="fhint" id="matchHint"></span>
+      <span id="cvtSwitch"></span>
+      <button onclick="copyText('mode')">复制时序表</button>
+      <button onclick="copyText('summary')">复制一行摘要</button>
+      <button onclick="copyText('json')">复制 JSON</button>
+    </div>
+  </div>
+
+  <div class="card" id="bwCard" style="display:none">
+    <h2>链路带宽 <span class="hint" id="bwHint"></span></h2>
+    <div id="bwConc" style="margin:2px 0 12px;line-height:1.85"></div>
+    <table class="t" id="tNeed"></table>
+    <div class="hint" style="margin:14px 0 6px">接口规格全表 — 总带宽 / 有效载荷（有效载荷 = 总带宽扣除编码开销）</div>
+    <div class="grid2">
+      <div><div class="hint" style="margin:4px 0 4px">HDMI（TMDS + FRL）</div><table class="t" id="tHdmi"></table></div>
+      <div><div class="hint" style="margin:4px 0 4px">DisplayPort（8b/10b + UHBR）</div><table class="t" id="tDp"></table></div>
+    </div>
+  </div>
+
+  <div class="card" id="vicCard" style="display:none">
+    <h2>标准来源 <span class="hint">— 与标准表逐字节对照</span></h2>
+    <div id="vicBody" class="hint"></div>
+  </div>
+</main>
+
+<script>
+var KEYS=["id","w","h","ht","vt","pc","hf","hs","hb","hp","vf","vs","vb","vp","i","x","fr","rd"];
+var VIC_DATA=[[1,640,480,800,525,25.175,16,96,48,-1,10,2,33,-1,0,"4:3",59.94,"59.94Hz/60Hz"],[2,720,480,858,525,27.0,16,62,60,-1,9,6,30,-1,0,"4:3",59.94,"59.94Hz/60Hz"],[3,720,480,858,525,27.0,16,62,60,-1,9,6,30,-1,0,"16:9",59.94,"59.94Hz/60Hz"],[4,1280,720,1650,750,74.25,110,40,220,1,5,5,20,1,0,"16:9",60.0,"59.94Hz/60Hz"],[5,1920,1080,2200,1125,74.25,88,44,148,1,2,5,15,1,1,"16:9",60.0,"59.94Hz/60Hz"],[6,1440,480,1716,525,27.0,38,124,114,-1,4,3,15,-1,1,"4:3",59.94,"59.94Hz/60Hz"],[7,1440,480,1716,525,27.0,38,124,114,-1,4,3,15,-1,1,"16:9",59.94,"59.94Hz/60Hz"],[8,1440,240,1716,263,27.0,38,124,114,-1,5,3,15,-1,0,"4:3",59.826,"59.94Hz/60Hz"],[9,1440,240,1716,263,27.0,38,124,114,-1,5,3,15,-1,0,"16:9",59.826,"59.94Hz/60Hz"],[10,2880,480,3432,525,54.0,76,248,228,-1,4,3,15,-1,1,"4:3",59.94,"59.94Hz/60Hz"],[11,2880,480,3432,525,54.0,76,248,228,-1,4,3,15,-1,1,"16:9",59.94,"59.94Hz/60Hz"],[12,2880,240,3432,263,54.0,76,248,228,-1,5,3,15,-1,0,"4:3",59.826,"59.94Hz/60Hz"],[13,2880,240,3432,263,54.0,76,248,228,-1,5,3,15,-1,0,"16:9",59.826,"59.94Hz/60Hz"],[14,1440,480,1716,525,54.0,32,124,120,-1,9,6,30,-1,0,"4:3",59.94,"59.94Hz/60Hz"],[15,1440,480,1716,525,54.0,32,124,120,-1,9,6,30,-1,0,"16:9",59.94,"59.94Hz/60Hz"],[16,1920,1080,2200,1125,148.5,88,44,148,1,4,5,36,1,0,"16:9",60.0,"59.94Hz/60Hz"],[17,720,576,864,625,27.0,12,64,68,-1,5,5,39,-1,0,"4:3",50.0,"50Hz"],[18,720,576,864,625,27.0,12,64,68,-1,5,5,39,-1,0,"16:9",50.0,"50Hz"],[19,1280,720,1980,750,74.25,440,40,220,1,5,5,20,1,0,"16:9",50.0,"50Hz"],[20,1920,1080,2640,1125,74.25,528,44,148,1,2,5,15,1,1,"16:9",50.0,"50Hz"],[21,1440,576,1728,625,27.0,24,126,138,-1,2,3,19,-1,1,"4:3",50.0,"50Hz"],[22,1440,576,1728,625,27.0,24,126,138,-1,2,3,19,-1,1,"16:9",50.0,"50Hz"],[23,1440,288,1728,314,27.0,24,126,138,-1,4,3,19,-1,0,"4:3",49.761,"50Hz"],[24,1440,288,1728,314,27.0,24,126,138,-1,4,3,19,-1,0,"16:9",49.761,"50Hz"],[25,2880,576,3456,625,54.0,48,252,276,-1,2,3,19,-1,1,"4:3",50.0,"50Hz"],[26,2880,576,3456,625,54.0,48,252,276,-1,2,3,19,-1,1,"16:9",50.0,"50Hz"],[27,2880,288,3456,314,54.0,48,252,276,-1,4,3,19,-1,0,"4:3",49.761,"50Hz"],[28,2880,288,3456,314,54.0,48,252,276,-1,4,3,19,-1,0,"16:9",49.761,"50Hz"],[29,1440,576,1728,625,54.0,24,128,136,-1,5,5,39,-1,0,"4:3",50.0,"50Hz"],[30,1440,576,1728,625,54.0,24,128,136,-1,5,5,39,-1,0,"16:9",50.0,"50Hz"],[31,1920,1080,2640,1125,148.5,528,44,148,1,4,5,36,1,0,"16:9",50.0,"50Hz"],[32,1920,1080,2750,1125,74.25,638,44,148,1,4,5,36,1,0,"16:9",24.0,"23.98Hz/24Hz"],[33,1920,1080,2640,1125,74.25,528,44,148,1,4,5,36,1,0,"16:9",25.0,"25Hz"],[34,1920,1080,2200,1125,74.25,88,44,148,1,4,5,36,1,0,"16:9",30.0,"29.97Hz/30Hz"],[35,2880,480,3432,525,108.0,64,248,240,-1,9,6,30,-1,0,"4:3",59.94,"59.94Hz/60Hz"],[36,2880,480,3432,525,108.0,64,248,240,-1,9,6,30,-1,0,"16:9",59.94,"59.94Hz/60Hz"],[37,2880,576,3456,625,108.0,48,256,272,-1,5,5,39,-1,0,"4:3",50.0,"50Hz"],[38,2880,576,3456,625,108.0,48,256,272,-1,5,5,39,-1,0,"16:9",50.0,"50Hz"],[39,1920,1080,2304,1250,72.0,32,168,184,1,23,5,57,-1,1,"16:9",50.0,"50Hz"],[40,1920,1080,2640,1125,148.5,528,44,148,1,2,5,15,1,1,"16:9",100.0,"100Hz"],[41,1280,720,1980,750,148.5,440,40,220,1,5,5,20,1,0,"16:9",100.0,"100Hz"],[42,720,576,864,625,54.0,12,64,68,-1,5,5,39,-1,0,"4:3",100.0,"100Hz"],[43,720,576,864,625,54.0,12,64,68,-1,5,5,39,-1,0,"16:9",100.0,"100Hz"],[44,1440,576,1728,625,54.0,24,126,138,-1,2,3,19,-1,1,"4:3",100.0,"100Hz"],[45,1440,576,1728,625,54.0,24,126,138,-1,2,3,19,-1,1,"16:9",100.0,"100Hz"],[46,1920,1080,2200,1125,148.5,88,44,148,1,2,5,15,1,1,"16:9",120.0,"119.88/120Hz"],[47,1280,720,1650,750,148.5,110,40,220,1,5,5,20,1,0,"16:9",120.0,"119.88/120Hz"],[48,720,480,858,525,54.0,16,62,60,-1,9,6,30,-1,0,"4:3",119.88,"119.88/120Hz"],[49,720,480,858,525,54.0,16,62,60,-1,9,6,30,-1,0,"16:9",119.88,"119.88/120Hz"],[50,1440,480,1716,525,54.0,38,124,114,-1,4,3,15,-1,1,"4:3",119.88,"119.88/120Hz"],[51,1440,480,1716,525,54.0,38,124,114,-1,4,3,15,-1,1,"16:9",119.88,"119.88/120Hz"],[52,720,576,864,625,108.0,12,64,68,-1,5,5,39,-1,0,"4:3",200.0,"200Hz"],[53,720,576,864,625,108.0,12,64,68,-1,5,5,39,-1,0,"16:9",200.0,"200Hz"],[54,1440,576,1728,625,108.0,24,126,138,-1,2,3,19,-1,1,"4:3",200.0,"200Hz"],[55,1440,576,1728,625,108.0,24,126,138,-1,2,3,19,-1,1,"16:9",200.0,"200Hz"],[56,720,480,858,525,108.0,16,62,60,-1,9,6,30,-1,0,"4:3",239.76,"239.76/240Hz"],[57,720,480,858,525,108.0,16,62,60,-1,9,6,30,-1,0,"16:9",239.76,"239.76/240Hz"],[58,1440,480,1716,525,108.0,38,124,114,-1,4,3,15,-1,1,"4:3",239.76,"239.76/240Hz"],[59,1440,480,1716,525,108.0,38,124,114,-1,4,3,15,-1,1,"16:9",239.76,"239.76/240Hz"],[60,1280,720,3300,750,59.4,1760,40,220,1,5,5,20,1,0,"16:9",24.0,"23.98Hz/24Hz"],[61,1280,720,3960,750,74.25,2420,40,220,1,5,5,20,1,0,"16:9",25.0,"25Hz"],[62,1280,720,3300,750,74.25,1760,40,220,1,5,5,20,1,0,"16:9",30.0,"29.97Hz/30Hz"],[63,1920,1080,2200,1125,297.0,88,44,148,1,4,5,36,1,0,"16:9",120.0,"119.88/120Hz"],[64,1920,1080,2640,1125,297.0,528,44,148,1,4,5,36,1,0,"16:9",100.0,"100Hz"],[65,1280,720,3300,750,59.4,1760,40,220,1,5,5,20,1,0,"64:27",24.0,"23.98Hz/24Hz"],[66,1280,720,3960,750,74.25,2420,40,220,1,5,5,20,1,0,"64:27",25.0,"25Hz"],[67,1280,720,3300,750,74.25,1760,40,220,1,5,5,20,1,0,"64:27",30.0,"29.97Hz/30Hz"],[68,1280,720,1980,750,74.25,440,40,220,1,5,5,20,1,0,"64:27",50.0,"50Hz"],[69,1280,720,1650,750,74.25,110,40,220,1,5,5,20,1,0,"64:27",60.0,"59.94Hz/60Hz"],[70,1280,720,1980,750,148.5,440,40,220,1,5,5,20,1,0,"64:27",100.0,"100Hz"],[71,1280,720,1650,750,148.5,110,40,220,1,5,5,20,1,0,"64:27",120.0,"119.88/120Hz"],[72,1920,1080,2750,1125,74.25,638,44,148,1,4,5,36,1,0,"64:27",24.0,"23.98Hz/24Hz"],[73,1920,1080,2640,1125,74.25,528,44,148,1,4,5,36,1,0,"64:27",25.0,"25Hz"],[74,1920,1080,2200,1125,74.25,88,44,148,1,4,5,36,1,0,"64:27",30.0,"29.97Hz/30Hz"],[75,1920,1080,2640,1125,148.5,528,44,148,1,4,5,36,1,0,"64:27",50.0,"50Hz"],[76,1920,1080,2200,1125,148.5,88,44,148,1,4,5,36,1,0,"64:27",60.0,"59.94Hz/60Hz"],[77,1920,1080,2640,1125,297.0,528,44,148,1,4,5,36,1,0,"64:27",100.0,"100Hz"],[78,1920,1080,2200,1125,297.0,88,44,148,1,4,5,36,1,0,"64:27",120.0,"119.88/120Hz"],[79,1680,720,3300,750,59.4,1360,40,220,1,5,5,20,1,0,"64:27",24.0,"23.98Hz/24Hz"],[80,1680,720,3168,750,59.4,1228,40,220,1,5,5,20,1,0,"64:27",25.0,"25Hz"],[81,1680,720,2640,750,59.4,700,40,220,1,5,5,20,1,0,"64:27",30.0,"29.97Hz/30Hz"],[82,1680,720,2200,750,82.5,260,40,220,1,5,5,20,1,0,"64:27",50.0,"50Hz"],[83,1680,720,2200,750,99.0,260,40,220,1,5,5,20,1,0,"64:27",60.0,"59.94Hz/60Hz"],[84,1680,720,2000,825,165.0,60,40,220,1,5,5,95,1,0,"64:27",100.0,"100Hz"],[85,1680,720,2000,825,198.0,60,40,220,1,5,5,95,1,0,"64:27",120.0,"119.88/120Hz"],[86,2560,1080,3750,1100,99.0,998,44,148,1,4,5,11,1,0,"64:27",24.0,"23.98Hz/24Hz"],[87,2560,1080,3200,1125,90.0,448,44,148,1,4,5,36,1,0,"64:27",25.0,"25Hz"],[88,2560,1080,3520,1125,118.8,768,44,148,1,4,5,36,1,0,"64:27",30.0,"29.97Hz/30Hz"],[89,2560,1080,3300,1125,185.625,548,44,148,1,4,5,36,1,0,"64:27",50.0,"50Hz"],[90,2560,1080,3000,1100,198.0,248,44,148,1,4,5,11,1,0,"64:27",60.0,"59.94Hz/60Hz"],[91,2560,1080,2970,1250,371.25,218,44,148,1,4,5,161,1,0,"64:27",100.0,"100Hz"],[92,2560,1080,3300,1250,495.0,548,44,148,1,4,5,161,1,0,"64:27",120.0,"119.88/120Hz"],[93,3840,2160,5500,2250,297.0,1276,88,296,1,8,10,72,1,0,"16:9",24.0,"23.98Hz/24Hz"],[94,3840,2160,5280,2250,297.0,1056,88,296,1,8,10,72,1,0,"16:9",25.0,"25Hz"],[95,3840,2160,4400,2250,297.0,176,88,296,1,8,10,72,1,0,"16:9",30.0,"29.97Hz/30Hz"],[96,3840,2160,5280,2250,594.0,1056,88,296,1,8,10,72,1,0,"16:9",50.0,"50Hz"],[97,3840,2160,4400,2250,594.0,176,88,296,1,8,10,72,1,0,"16:9",60.0,"59.94Hz/60Hz"],[98,4096,2160,5500,2250,297.0,1020,88,296,1,8,10,72,1,0,"256:135",24.0,"23.98Hz/24Hz"],[99,4096,2160,5280,2250,297.0,968,88,128,1,8,10,72,1,0,"256:135",25.0,"25Hz"],[100,4096,2160,4400,2250,297.0,88,88,128,1,8,10,72,1,0,"256:135",30.0,"29.97Hz/30Hz"],[101,4096,2160,5280,2250,594.0,968,88,128,1,8,10,72,1,0,"256:135",50.0,"50Hz"],[102,4096,2160,4400,2250,594.0,88,88,128,1,8,10,72,1,0,"256:135",60.0,"59.94Hz/60Hz"],[103,3840,2160,5500,2250,297.0,1276,88,296,1,8,10,72,1,0,"64:27",24.0,"23.98Hz/24Hz"],[104,3840,2160,5280,2250,297.0,1056,88,296,1,8,10,72,1,0,"64:27",25.0,"25Hz"],[105,3840,2160,4400,2250,297.0,176,88,296,1,8,10,72,1,0,"64:27",30.0,"29.97Hz/30Hz"],[106,3840,2160,5280,2250,594.0,1056,88,296,1,8,10,72,1,0,"64:27",50.0,"50Hz"],[107,3840,2160,4400,2250,594.0,176,88,296,1,8,10,72,1,0,"64:27",60.0,"59.94Hz/60Hz"],[108,1280,720,2500,750,90.0,960,40,220,1,5,5,20,1,0,"16:9",48.0,"47.95Hz/48Hz"],[109,1280,720,2500,750,90.0,960,40,220,1,5,5,20,1,0,"64:27",48.0,"47.95Hz/48Hz"],[110,1680,720,2750,750,99.0,810,40,220,1,5,5,20,1,0,"64:27",48.0,"47.95Hz/48Hz"],[111,1920,1080,2750,1125,148.5,638,44,148,1,4,5,36,1,0,"16:9",48.0,"47.95Hz/48Hz"],[112,1920,1080,2750,1125,148.5,638,44,148,1,4,5,36,1,0,"64:27",48.0,"47.95Hz/48Hz"],[113,2560,1080,3750,1100,198.0,998,44,148,1,4,5,11,1,0,"64:27",48.0,"47.95Hz/48Hz"],[114,3840,2160,5500,2250,594.0,1276,88,296,1,8,10,72,1,0,"16:9",48.0,"47.95Hz/48Hz"],[115,4096,2160,5500,2250,594.0,1020,88,296,1,8,10,72,1,0,"256:135",48.0,"47.95Hz/48Hz"],[116,3840,2160,5500,2250,594.0,1276,88,296,1,8,10,72,1,0,"64:27",48.0,"47.95Hz/48Hz"],[117,3840,2160,5280,2250,1188.0,1056,88,296,1,8,10,72,1,0,"16:9",100.0,"100Hz"],[118,3840,2160,4400,2250,1188.0,176,88,296,1,8,10,72,1,0,"16:9",120.0,"119.88/120Hz"],[119,3840,2160,5280,2250,1188.0,1056,88,296,1,8,10,72,1,0,"64:27",100.0,"100Hz"],[120,3840,2160,4400,2250,1188.0,176,88,296,1,8,10,72,1,0,"64:27",120.0,"119.88/120Hz"],[121,5120,2160,7500,2200,396.0,1996,88,296,1,8,10,22,1,0,"64:27",24.0,"23.98Hz/24Hz"],[122,5120,2160,7200,2200,396.0,1696,88,296,1,8,10,22,1,0,"64:27",25.0,"25Hz"],[123,5120,2160,6000,2200,396.0,664,88,128,1,8,10,22,1,0,"64:27",30.0,"29.97Hz/30Hz"],[124,5120,2160,6250,2475,742.5,746,88,296,1,8,10,297,1,0,"64:27",48.0,"47.95Hz/48Hz"],[125,5120,2160,6600,2250,742.5,1096,88,296,1,8,10,72,1,0,"64:27",50.0,"50Hz"],[126,5120,2160,5500,2250,742.5,164,88,128,1,8,10,72,1,0,"64:27",60.0,"59.94Hz/60Hz"],[127,5120,2160,6600,2250,1485.0,1096,88,296,1,8,10,72,1,0,"64:27",100.0,"100Hz"],[193,5120,2160,5500,2250,1485.0,164,88,128,1,8,10,72,1,0,"64:27",120.0,"119.88/120Hz"],[194,7680,4320,11000,4500,1188.0,2552,176,592,1,16,20,144,1,0,"16:9",24.0,"23.98Hz/24Hz"],[195,7680,4320,10800,4400,1188.0,2352,176,592,1,16,20,44,1,0,"16:9",25.0,"25Hz"],[196,7680,4320,9000,4400,1188.0,552,176,592,1,16,20,44,1,0,"16:9",30.0,"29.97Hz/30Hz"],[197,7680,4320,11000,4500,2376.0,2552,176,592,1,16,20,144,1,0,"16:9",48.0,"47.95Hz/48Hz"],[198,7680,4320,10800,4400,2376.0,2352,176,592,1,16,20,44,1,0,"16:9",50.0,"50Hz"],[199,7680,4320,9000,4400,2376.0,552,176,592,1,16,20,44,1,0,"16:9",60.0,"59.94Hz/60Hz"],[200,7680,4320,10560,4500,4752.0,2112,176,592,1,16,20,144,1,0,"16:9",100.0,"100Hz"],[201,7680,4320,8800,4500,4752.0,352,176,592,1,16,20,144,1,0,"16:9",120.0,"119.88/120Hz"],[202,7680,4320,11000,4500,1188.0,2552,176,592,1,16,20,144,1,0,"64:27",24.0,"23.98Hz/24Hz"],[203,7680,4320,10800,4400,1188.0,2352,176,592,1,16,20,44,1,0,"64:27",25.0,"25Hz"],[204,7680,4320,9000,4400,1188.0,552,176,592,1,16,20,44,1,0,"64:27",30.0,"29.97Hz/30Hz"],[205,7680,4320,11000,4500,2376.0,2552,176,592,1,16,20,144,1,0,"64:27",48.0,"47.95Hz/48Hz"],[206,7680,4320,10800,4400,2376.0,2352,176,592,1,16,20,44,1,0,"64:27",50.0,"50Hz"],[207,7680,4320,9000,4400,2376.0,552,176,592,1,16,20,44,1,0,"64:27",60.0,"59.94Hz/60Hz"],[208,7680,4320,10560,4500,4752.0,2112,176,592,1,16,20,144,1,0,"64:27",100.0,"100Hz"],[209,7680,4320,8800,4500,4752.0,352,176,592,1,16,20,144,1,0,"64:27",120.0,"119.88/120Hz"],[210,10240,4320,12500,4950,1485.0,1492,176,592,1,16,20,594,1,0,"64:27",24.0,"23.98Hz/24Hz"],[211,10240,4320,13500,4400,1485.0,2492,176,592,1,16,20,44,1,0,"64:27",25.0,"25Hz"],[212,10240,4320,11000,4500,1485.0,288,176,296,1,16,20,144,1,0,"64:27",30.0,"29.97Hz/30Hz"],[213,10240,4320,12500,4950,2970.0,1492,176,592,1,16,20,594,1,0,"64:27",48.0,"47.95Hz/48Hz"],[214,10240,4320,13500,4400,2970.0,2492,176,592,1,16,20,44,1,0,"64:27",50.0,"50Hz"],[215,10240,4320,11000,4500,2970.0,288,176,296,1,16,20,144,1,0,"64:27",60.0,"59.94Hz/60Hz"],[216,10240,4320,13200,4500,5940.0,2192,176,592,1,16,20,144,1,0,"64:27",100.0,"100Hz"],[217,10240,4320,11000,4500,5940.0,288,176,296,1,16,20,144,1,0,"64:27",120.0,"119.88/120Hz"],[218,4096,2160,5280,2250,1188.0,800,88,296,1,8,10,72,1,0,"256:135",100.0,"100Hz"],[219,4096,2160,4400,2250,1188.0,88,88,128,1,8,10,72,1,0,"256:135",120.0,"119.88/120Hz"]];
+var DMT_DATA=[[1,640,350,832,445,31.5,32,64,96,1,32,3,60,-1,0,"",85.0,""],[2,640,400,832,445,31.5,32,64,96,-1,1,3,41,1,0,"",85.0,""],[3,720,400,936,446,35.5,36,72,108,-1,1,3,42,1,0,"",85.0,""],[4,640,480,800,525,25.175,8,96,40,-1,2,2,25,-1,0,"",60.0,""],[5,640,480,832,520,31.5,16,40,120,-1,1,3,20,-1,0,"",72.0,""],[6,640,480,840,500,31.5,16,64,120,-1,1,3,16,-1,0,"",75.0,""],[7,640,480,832,509,36.0,56,56,80,-1,1,3,25,-1,0,"",85.0,""],[8,800,600,1024,625,36.0,24,72,128,1,1,2,22,1,0,"",56.0,""],[9,800,600,1056,628,40.0,40,128,88,1,1,4,23,1,0,"",60.0,""],[10,800,600,1040,666,50.0,56,120,64,1,37,6,23,1,0,"",72.0,""],[11,800,600,1056,625,49.5,16,80,160,1,1,3,21,1,0,"",75.0,""],[12,800,600,1048,631,56.25,32,64,152,1,1,3,27,1,0,"",85.0,""],[13,800,600,960,636,73.25,48,32,80,0,3,4,29,0,0,"cvt-rb",120.0,""],[14,848,480,1088,517,33.75,16,112,112,1,6,8,23,1,0,"",60.0,""],[15,1024,768,1264,792,44.9,8,176,56,1,0,4,20,1,0,"",43.0,""],[16,1024,768,1344,806,65.0,24,136,160,-1,3,6,29,-1,0,"",60.0,""],[17,1024,768,1328,806,75.0,24,136,144,-1,3,6,29,-1,0,"",70.0,""],[18,1024,768,1312,800,78.75,16,96,176,1,1,3,28,1,0,"",75.0,""],[19,1024,768,1376,808,94.5,48,96,208,1,1,3,36,1,0,"",85.0,""],[20,1024,768,1184,813,115.5,48,32,80,0,3,4,38,0,0,"cvt-rb",120.0,""],[21,1152,864,1600,900,108.0,64,128,256,1,1,3,32,1,0,"",75.0,""],[85,1280,720,1650,750,74.25,110,40,220,0,5,5,20,0,0,"",60.0,""],[22,1280,768,1440,790,68.25,48,32,80,0,3,7,12,0,0,"cvt-rb",60.0,""],[23,1280,768,1664,798,79.5,64,128,192,0,3,7,20,0,0,"",60.0,""],[24,1280,768,1696,805,102.25,80,128,208,0,3,7,27,0,0,"",75.0,""],[25,1280,768,1712,809,117.5,80,136,216,0,3,7,31,0,0,"",85.0,""],[26,1280,768,1440,813,140.25,48,32,80,0,3,7,35,0,0,"cvt-rb",120.0,""],[27,1280,800,1440,823,71.0,48,32,80,0,3,6,14,0,0,"cvt-rb",60.0,""],[28,1280,800,1680,831,83.5,72,128,200,0,3,6,22,0,0,"",60.0,""],[29,1280,800,1696,838,106.5,80,128,208,0,3,6,29,0,0,"",75.0,""],[30,1280,800,1712,843,122.5,80,136,216,0,3,6,34,0,0,"",85.0,""],[31,1280,800,1440,847,146.25,48,32,80,0,3,6,38,0,0,"cvt-rb",120.0,""],[32,1280,960,1800,1000,108.0,96,112,312,1,1,3,36,1,0,"",60.0,""],[33,1280,960,1728,1011,148.5,64,160,224,1,1,3,47,1,0,"",85.0,""],[34,1280,960,1440,1017,175.5,48,32,80,0,3,4,50,0,0,"cvt-rb",120.0,""],[35,1280,1024,1688,1066,108.0,48,112,248,1,1,3,38,1,0,"",60.0,""],[36,1280,1024,1688,1066,135.0,16,144,248,1,1,3,38,1,0,"",75.0,""],[37,1280,1024,1728,1072,157.5,64,160,224,1,1,3,44,1,0,"",85.0,""],[38,1280,1024,1440,1084,187.25,48,32,80,0,3,7,50,0,0,"cvt-rb",120.0,""],[39,1360,768,1792,795,85.5,64,112,256,1,3,6,18,1,0,"",60.0,""],[40,1360,768,1520,813,148.25,48,32,80,0,3,5,37,0,0,"cvt-rb",120.0,""],[81,1366,768,1792,798,85.5,70,143,213,1,3,3,24,1,0,"",60.0,""],[86,1366,768,1500,800,72.0,14,56,64,1,1,3,28,1,0,"cvt-rb",60.0,""],[41,1400,1050,1560,1080,101.0,48,32,80,0,3,4,23,0,0,"cvt-rb",60.0,""],[42,1400,1050,1864,1089,121.75,88,144,232,0,3,4,32,0,0,"",60.0,""],[43,1400,1050,1896,1099,156.0,104,144,248,0,3,4,42,0,0,"",75.0,""],[44,1400,1050,1912,1105,179.5,104,152,256,0,3,4,48,0,0,"",85.0,""],[45,1400,1050,1560,1112,208.0,48,32,80,0,3,4,55,0,0,"cvt-rb",120.0,""],[46,1440,900,1600,926,88.75,48,32,80,0,3,6,17,0,0,"cvt-rb",60.0,""],[47,1440,900,1904,934,106.5,80,152,232,0,3,6,25,0,0,"",60.0,""],[48,1440,900,1936,942,136.75,96,152,248,0,3,6,33,0,0,"",75.0,""],[49,1440,900,1952,948,157.0,104,152,256,0,3,6,39,0,0,"",85.0,""],[50,1440,900,1600,953,182.75,48,32,80,0,3,6,44,0,0,"cvt-rb",120.0,""],[83,1600,900,1800,1000,108.0,24,80,96,1,1,3,96,1,0,"cvt-rb",60.0,""],[51,1600,1200,2160,1250,162.0,64,192,304,1,1,3,46,1,0,"",60.0,""],[52,1600,1200,2160,1250,175.5,64,192,304,1,1,3,46,1,0,"",65.0,""],[53,1600,1200,2160,1250,189.0,64,192,304,1,1,3,46,1,0,"",70.0,""],[54,1600,1200,2160,1250,202.5,64,192,304,1,1,3,46,1,0,"",75.0,""],[55,1600,1200,2160,1250,229.5,64,192,304,1,1,3,46,1,0,"",85.0,""],[56,1600,1200,1760,1271,268.25,48,32,80,0,3,4,64,0,0,"cvt-rb",120.0,""],[57,1680,1050,1840,1080,119.0,48,32,80,0,3,6,21,0,0,"cvt-rb",60.0,""],[58,1680,1050,2240,1089,146.25,104,176,280,0,3,6,30,0,0,"",60.0,""],[59,1680,1050,2272,1099,187.0,120,176,296,0,3,6,40,0,0,"",75.0,""],[60,1680,1050,2288,1105,214.75,128,176,304,0,3,6,46,0,0,"",85.0,""],[61,1680,1050,1840,1112,245.5,48,32,80,0,3,6,53,0,0,"cvt-rb",120.0,""],[62,1792,1344,2448,1394,204.75,128,200,328,-1,1,3,46,1,0,"",60.0,""],[63,1792,1344,2456,1417,261.0,96,216,352,-1,1,3,69,1,0,"",75.0,""],[64,1792,1344,1952,1423,333.25,48,32,80,0,3,4,72,0,0,"cvt-rb",120.0,""],[65,1856,1392,2528,1439,218.25,96,224,352,-1,1,3,43,1,0,"",60.0,""],[66,1856,1392,2560,1500,288.0,128,224,352,-1,1,3,104,1,0,"",75.0,""],[67,1856,1392,2016,1474,356.5,48,32,80,0,3,4,75,0,0,"cvt-rb",120.0,""],[82,1920,1080,2200,1125,148.5,88,44,148,0,4,5,36,0,0,"",60.0,""],[68,1920,1200,2080,1235,154.0,48,32,80,0,3,6,26,0,0,"cvt-rb",60.0,""],[69,1920,1200,2592,1245,193.25,136,200,336,0,3,6,36,0,0,"",60.0,""],[70,1920,1200,2608,1255,245.25,136,208,344,0,3,6,46,0,0,"",75.0,""],[71,1920,1200,2624,1262,281.25,144,208,352,0,3,6,53,0,0,"",85.0,""],[72,1920,1200,2080,1271,317.0,48,32,80,0,3,6,62,0,0,"cvt-rb",120.0,""],[73,1920,1440,2600,1500,234.0,128,208,344,-1,1,3,56,1,0,"",60.0,""],[74,1920,1440,2640,1500,297.0,144,224,352,-1,1,3,56,1,0,"",75.0,""],[75,1920,1440,2080,1525,380.5,48,32,80,0,3,4,78,0,0,"cvt-rb",120.0,""],[84,2048,1152,2250,1200,162.0,26,80,96,1,1,3,44,1,0,"cvt-rb",60.0,""],[76,2560,1600,2720,1646,268.5,48,32,80,0,3,6,37,0,0,"cvt-rb",60.0,""],[77,2560,1600,3504,1658,348.5,192,280,472,0,3,6,49,0,0,"",60.0,""],[78,2560,1600,3536,1672,443.25,208,280,488,0,3,6,63,0,0,"",75.0,""],[79,2560,1600,3536,1682,505.25,208,280,488,0,3,6,73,0,0,"",85.0,""],[80,2560,1600,2720,1694,552.75,48,32,80,0,3,6,85,0,0,"cvt-rb",120.0,""]];
+/* ---- 数据 ---- */
+function rowToObj(row){
+  var o={};for(var i=0;i<KEYS.length;i++)o[KEYS[i]]=row[i];return o;
+}
+var VICS=VIC_DATA.map(rowToObj), DMTS=DMT_DATA.map(rowToObj);
+
+/* ---- 单行解析 ---- */
+var ALIAS={
+  "480p":[720,480],"576p":[720,576],"720p":[1280,720],"1080p":[1920,1080],"1080i":[1920,1080],
+  "1440p":[2560,1440],"2160p":[3840,2160],"4320p":[7680,4320],"2k":[2048,1080],
+  "4k":[3840,2160],"8k":[7680,4320],"5k":[5120,2880],"6k":[6016,3384]
+};
+function parseQuery(s){
+  var t=String(s||"").trim().toLowerCase();
+  var rb=null;
+  var mr=t.match(/(^|\s)(cvt-rbv?3|cvt-rbv?2|cvt-rbv?1|cvt-rb|rbv?3|rbv?2|rbv?1|rb|cvt)$/);
+  if(mr){
+    var w2=mr[2];
+    rb = /3$/.test(w2)?3 : (/2$/.test(w2)?2 : (w2==="cvt"?0:1));
+    t=t.slice(0,mr.index+mr[1].length);
+  }
+  t=t.replace(/(\d{3,5}x\d{3,5})\s+(\d+(?:\.\d+)?)$/,"$1@$2");
+  t=t.replace(/(\d{3,5}[pi]|\d+k[pi]?)\s+(\d+(?:\.\d+)?)$/,"$1@$2");
+  t=t.replace(/\s+/g,"");
+  if(!t) return {error:"请输入分辨率或 VIC"};
+  var m=t.match(/^vic-?(\d{1,3})$/);
+  if(m) return {vic:parseInt(m[1],10)};
+  m=t.match(/^(\d{1,3})$/);            // 单个数字按 VIC 编号查表，查不到由调用方报错
+  if(m) return {vic:parseInt(m[1],10)};
+  // 1080p60 / 2160p120 / 720p59.94 / 1080i50 / 576p50
+  m=t.match(/^(\d{3,4})([pi])@?(\d+(?:\.\d+)?)$/);
+  if(m){
+    var wh=ALIAS[m[1]+"p"];
+    if(wh) return {w:wh[0],h:wh[1],vf:parseFloat(m[3]),inter:m[2]==="i"};
+  }
+  // 4k60 / 8k30 / 2k24（可带可不带 p/i）
+  m=t.match(/^(\d+k)([pi])?@?(\d+(?:\.\d+)?)$/);
+  if(m){
+    var wh2=ALIAS[m[1]];
+    if(wh2) return {w:wh2[0],h:wh2[1],vf:parseFloat(m[3]),inter:m[2]==="i"};
+  }
+  // 1080p / 4k（不带刷新率）
+  m=t.match(/^(\d{3,4})([pi])$/);
+  if(m){
+    var wh3=ALIAS[m[1]+"p"];
+    if(wh3) return {w:wh3[0],h:wh3[1],vf:null,inter:m[2]==="i"};
+  }
+  m=t.match(/^(\d+k)$/);
+  if(m){
+    var wh4=ALIAS[m[1]];
+    if(wh4) return {w:wh4[0],h:wh4[1],vf:null,inter:false};
+  }
+  // 3840x2160p60 / 3840x2160@60 / 3840x2160i50 / 3840x2160
+  m=t.match(/^(\d{3,5})x(\d{3,5})([pi])?(?:@?(\d+(?:\.\d+)?))?$/);
+  if(m){
+    return {w:+m[1],h:+m[2],vf:m[4]?parseFloat(m[4]):null,inter:m[3]==="i",rb:rb};
+  }
+  return {error:"看不懂「"+s+"」，试试 3840x2160p60、4K60、1080p59.94、VIC 97"};
+}
+
+/* ---- 查表 ---- */
+var NTSC_RE=/59\.94|29\.97|23\.9\d|119\.88|47\.95|239\.76/;
+function near(a,b){return b?Math.abs(a-b)/b<0.002:false;}
+function findVic(q){
+  if(q.vic!=null){for(var i=0;i<VICS.length;i++)if(VICS[i].id===q.vic)return VICS[i];return null;}
+  var best=null,bestDiff=1e9;
+  for(var j=0;j<VICS.length;j++){var v=VICS[j];
+    if(v.w!==q.w||v.h!==q.h)continue;
+    if(q.inter!==!!v.i)continue;      // 扫描方式必须一致（逐行不匹配隔行记录）
+    var vf=derived(v).vf;            // 隔行已折算成实际场频
+    if(q.vf==null){if(best===null)best=v;continue;}
+    var diff=Math.abs(vf-q.vf)/q.vf;
+    // NTSC 系格式(59.94/29.97/23.976)允许把 59/29/23 这类整数输入按最近值匹配
+    var lim=(v.rd&&NTSC_RE.test(v.rd))?0.05:0.005;
+    if(diff<lim&&diff<bestDiff){bestDiff=diff;best=v;}
+  }
+  return best;
+}
+function findDmt(q){
+  for(var i=0;i<DMTS.length;i++){var d=DMTS[i];
+    if(d.w!==q.w||d.h!==q.h)continue;
+    var fr=q.vf==null?(d.fr||60):q.vf;
+    if(q.vf!=null){
+      var dd=Math.abs((d.fr||0)-fr)/fr;
+      var dlim=(d.rd&&NTSC_RE.test(d.rd))?0.05:0.002;
+      if(dd>=dlim)continue;
+    }
+    if(!d.pc){                                  // DMT 里 cvt / cvt-rb 条目只给参数，按时序公式现算
+      return cvtMode(d.w,d.h,d.fr||fr,{rb:String(d.x).indexOf("rb")>=0?1:0});
+    }
+    return d;
+  }
+  return null;
+}
+
+/* ---- VESA CVT（CVT 1.2 / Reduced Blanking）----
+   常量为 VESA CVT v1.2 标准参数：
+   margin 1.8%%、字符单元 8、最小 V porch 3、最小 V back porch 6、
+   最小 VSync+BPort 550us、HSync 占行周期 8%%、时钟步进 250kHz、
+   RB: 固定 H blank 160 / H sync 32 / V front porch 3 / 最小 V blank 460us */
+function cvtMode(w,h,vrefresh,opt){
+  /* VESA CVT 1.2 / edid-decode 同源算法；rb: 0=标准CVT 1=RBv1 2=RBv2 3=RBv3 */
+  opt=opt||{};
+  var rb=opt.rb|0, inter=!!opt.inter, margins=!!opt.margins, vopt=!!opt.videoOpt;
+  if(!vrefresh)vrefresh=60;
+  var cell = rb===2 ? 1 : 8;
+  var h_rnd = Math.floor(w/cell)*cell;
+  var v_rnd = inter ? Math.floor(h/2) : h;
+  var h_margin = margins ? Math.floor((h_rnd*1.8/100)/cell)*cell : 0;
+  var v_margin = margins ? Math.floor(1.8/100*v_rnd) : 0;
+  var interlace = inter ? 0.5 : 0;
+  var total_active = h_rnd + h_margin*2;
+  var vfr = inter ? vrefresh*2 : vrefresh;
+  var step = rb>=2 ? 0.001 : 0.25;
+  var h_blank = (rb===1 ? 160 : 80);
+  var rb_vfp = (rb===1 ? 3 : 1);
+  var refresh_mult = (rb===2 && vopt) ? 1000/1001 : 1;
+  var rb_min_vblank = rb===3 ? (opt.vblank||460) : 460;
+  if(rb_min_vblank<460)rb_min_vblank=460;
+  var h_sync=32;
+  if(rb===3){var add=opt.addHBlank||0; if(add<0)add=0; if(add>120)add=120; h_blank+=add;}
+  var vs;
+  if(h*4/3===w)vs=4;
+  else if(h*16/9===w)vs=5;
+  else if(h*16/10===w)vs=6;
+  else if(h%4===0&&h*5/4===w)vs=7;
+  else if(h*15/9===w)vs=7;
+  else vs=10;
+  if(rb>=2)vs=8;
+  var h_period,vsbp,v_blank,total_v,total_px,pixel_freq,ideal;
+  if(rb===0){
+    h_period=(1.0/vfr-550/1e6)/(v_rnd+v_margin*2+3+interlace)*1e6;
+    vsbp=Math.floor(550/h_period)+1;
+    if(vsbp<vs+7)vsbp=vs+7;
+    v_blank=vsbp+3;
+    total_v=v_rnd+v_margin*2+vsbp+interlace+3;
+    ideal=30-300*h_period/1000;
+    if(ideal<20)ideal=20;
+    h_blank=Math.floor(total_active*ideal/(100-ideal)/(2*cell))*2*cell;
+    total_px=total_active+h_blank;
+    h_sync=Math.floor(total_px*0.08/cell)*cell;
+    pixel_freq=Math.floor(total_px/h_period/step)*step;
+  }else{
+    h_period=(1000000.0/vfr-rb_min_vblank)/(v_rnd+v_margin*2);
+    var vbi=Math.floor(rb_min_vblank/h_period)+1;
+    var rb_vbp=(rb===1?7:6);
+    var rb_min_vbi=rb_vfp+vs+rb_vbp;
+    v_blank=(vbi<rb_min_vbi)?rb_min_vbi:vbi;
+    total_v=v_blank+v_rnd+v_margin*2+interlace;
+    vsbp=(rb===1)?(v_blank-rb_vfp):(vs+rb_vbp);
+    total_px=h_blank+total_active;
+    var freq=vfr*total_v*total_px*refresh_mult;
+    pixel_freq=(rb===3?Math.ceil(freq/1e6/step):Math.floor(freq/1e6/step))*step;
+  }
+  var hfp = rb>=2 ? 8 : (h_blank/2 - h_sync);
+  var vbp = vsbp - vs;
+  var vfp = v_blank - vbp - vs;
+  var t={
+    id:["CVT","CVT-RB","CVT-RBv2","CVT-RBv3"][rb],
+    w:Math.round(total_active),h:Math.round(h+v_margin*2),
+    ht:Math.round(total_px),vt:Math.round(total_v*(inter?2:1)),
+    pc:Math.round(pixel_freq*1000)/1000,
+    hf:Math.round(hfp),hs:Math.round(h_sync),hb:Math.round(h_blank-hfp-h_sync),
+    vf:Math.round(vfp),vs:Math.round(vs),vb:Math.round(vbp),
+    hp:(rb>0?1:-1),vp:(rb>0?-1:1),
+    i:inter?1:0,x:"",fr:vrefresh,rd:""
+  };
+  return t;
+}
+
+function derived(t){
+  var hb=t.ht-t.w, vb=t.vt-t.h;
+  var hf=t.pc*1e6/t.ht;          // Hz
+  var vf=hf/t.vt*(t.i?2:1);      // Hz（隔行是场频）
+  return {hb:hb,vb:vb,hf:hf,vf:vf};
+}
+function bitsPerPixel(bpc,cf){
+  return cf==="420"?(bpc*1.5):(cf==="422"?(bpc*2):(bpc*3));
+}
+function fmt(x,d){return x==null?"—":(Math.round(x*Math.pow(10,d))/Math.pow(10,d)).toFixed(d);}
+function num(x){return x==null?"—":String(+(+x).toFixed(3));}
+
+var CUR=null;
+function pol(p){return p>0?"正":(p<0?"负":"—");}
+function polEn(p){return p>0?"Positive":(p<0?"Negative":"unknown");}
+
+function renderTable(t){
+  var d=derived(t);
+  $("tH").innerHTML=
+    "<tr><th style='text-align:left'>水平</th><th>像素</th></tr>"+
+    "<tr><td>有效 (Active)</td><td>"+t.w+"</td></tr>"+
+    "<tr><td>前肩 (Front Porch)</td><td>"+t.hf+"</td></tr>"+
+    "<tr><td>同步 (Sync)</td><td>"+t.hs+"</td></tr>"+
+    "<tr><td>后肩 (Back Porch)</td><td>"+t.hb+"</td></tr>"+
+    "<tr><td>消隐 (Blank)</td><td>"+d.hb+"</td></tr>"+
+    "<tr class='tot'><td>总计 (Total)</td><td>"+t.ht+"</td></tr>"+
+    "<tr><td>同步极性</td><td class='hint'>"+pol(t.hp)+"</td></tr>";
+  $("tV").innerHTML=
+    "<tr><th style='text-align:left'>垂直</th><th>行</th></tr>"+
+    "<tr><td>有效 (Active)</td><td>"+t.h+"</td></tr>"+
+    "<tr><td>前肩 (Front Porch)</td><td>"+t.vf+"</td></tr>"+
+    "<tr><td>同步 (Sync)</td><td>"+t.vs+"</td></tr>"+
+    "<tr><td>后肩 (Back Porch)</td><td>"+t.vb+"</td></tr>"+
+    "<tr><td>消隐 (Blank)</td><td>"+Math.round(d.vb)+"</td></tr>"+
+    "<tr class='tot'><td>总计 (Total)</td><td>"+t.vt+"</td></tr>"+
+    "<tr><td>同步极性</td><td class='hint'>"+pol(t.vp)+"</td></tr>";
+}
+
+
+/* ---- 链路规格（spec 总带宽口径）---- */
+var FMTS=[
+  ["8 bpc RGB",24],["10 bpc RGB",30],["12 bpc RGB",36],
+  ["8 bpc 4:2:2",16],["10 bpc 4:2:2",20],["12 bpc 4:2:2",24],
+  ["8 bpc 4:2:0",12],["10 bpc 4:2:0",15],["12 bpc 4:2:0",18]
+];
+function linkSpecs(){
+  // 展示顺序即判定顺序：HDMI 按版本（1.4 -> 2.0 -> 2.1 FRL 档位递增）；
+  // DP 按速率递增、同速率下 lane 从少到多（1 -> 2 -> 4）
+  var dh=[],dd=[],i,j,tot;
+  dh.push({n:"HDMI 1.4",t:10.2,e:10.2*0.8,k:"TMDS 3×3.4G"});
+  dh.push({n:"HDMI 2.0",t:18.0,e:18.0*0.8,k:"TMDS 3×6.0G"});
+  // HDMI 2.1 FRL 只有 6 个 rate set：3 lane 仅 3G/6G，8G/10G/12G 均只存在于 4 lane
+  var FRL=[[3,3],[3,6],[4,6],[4,8],[4,10],[4,12]];
+  for(i=0;i<FRL.length;i++){tot=FRL[i][1]*FRL[i][0];dh.push({n:"FRL "+FRL[i][1]+"G×"+FRL[i][0],t:tot,e:tot*16/18,k:"16b/18b"});}
+  var LN=[1,2,4];
+  var L=[["RBR",1.62],["HBR",2.7],["HBR2",5.4],["HBR3",8.1]];
+  for(i=0;i<L.length;i++)for(j=0;j<3;j++){tot=L[i][1]*LN[j];dd.push({n:L[i][0]+"×"+LN[j],t:tot,e:tot*0.8,k:"8b/10b"});}
+  var U=[["UHBR10",10],["UHBR13.5",13.75],["UHBR20",20]];
+  for(i=0;i<U.length;i++)for(j=0;j<3;j++){tot=U[i][1]*LN[j];dd.push({n:U[i][0]+"×"+LN[j],t:tot,e:tot*128/132,k:"128b/132b"});}
+  return {dh:dh,dd:dd};
+}
+function minSpec(list,need){
+  for(var i=0;i<list.length;i++)if(list[i].e>=need-1e-9)return list[i];
+  return null;
+}
+var DP_LANES=[1,2,4];
+var DP_RATES=[["RBR",1.62,0.8],["HBR",2.7,0.8],["HBR2",5.4,0.8],["HBR3",8.1,0.8],
+  ["UHBR10",10,128/132],["UHBR13.5",13.75,128/132],["UHBR20",20,128/132]];
+function minDpRate(need,lanes){
+  for(var i=0;i<DP_RATES.length;i++){
+    var r=DP_RATES[i][1], enc=DP_RATES[i][2];
+    if(r*lanes*enc>=need-1e-9)return {n:DP_RATES[i][0],t:r*lanes,r:r,l:lanes};
+  }
+  return null;
+}
+function dpAll(need){
+  var out=[], LN=[4,2,1];
+  for(var i=0;i<3;i++){
+    var r=minDpRate(need,LN[i]);
+    if(r)out.push(LN[i]+" lane 至少 "+num(r.r)+" Gbps（"+r.n+"）");
+  }
+  return out.length?("DP "+out.join("，")):"DP 超出所有规格";
+}
+function renderBandwidth(t){
+  var d=derived(t), pclk=t.pc, S=linkSpecs();
+  var rows="<tr><th style='text-align:left'>像素格式</th><th>bpp</th><th>所需 Gbit/s</th>"+
+    "<th>最小 HDMI 规格</th>"+
+    "<th style='position:relative'><span style='position:absolute;left:8px'>DP</span>4 lane</th>"+
+    "<th>2 lane</th><th>1 lane</th></tr>";
+  for(var i=0;i<FMTS.length;i++){
+    var need=pclk*FMTS[i][1]/1000;
+    var h=minSpec(S.dh,need);
+    rows+="<tr><td>"+FMTS[i][0]+"</td><td>"+FMTS[i][1]+"</td><td>"+fmt(need,2)+"</td>"+
+      "<td>"+(h?"<span class='nw'>"+num(h.t)+"G</span><span class='badge b-ok'>"+h.n+"</span>":"<span class='badge b-bad'>n/a</span>")+"</td>";
+    var ln=[4,2,1];
+    for(var j=0;j<3;j++){
+      var rr=minDpRate(need,ln[j]);
+      rows+="<td>"+(rr?"<span class='nw'>"+num(rr.r)+"G×"+rr.l+"</span><span class='badge b-ok'>"+rr.n+"</span>":"<span class='badge b-bad'>n/a</span>")+"</td>";
+    }
+    rows+="</tr>";
+  }
+  $("tNeed").innerHTML=rows;
+
+  var hs="<tr><th style='text-align:left'>HDMI 规格</th><th>总带宽</th><th>有效载荷</th></tr>";
+  for(var a=0;a<S.dh.length;a++){var s=S.dh[a];
+    hs+="<tr><td>"+s.n+"</td><td>"+fmt(s.t,2)+" G</td><td>"+fmt(s.e,2)+" G</td></tr>";}
+  $("tHdmi").innerHTML=hs;
+  var ds="<tr><th style='text-align:left'>DP rate</th><th>1 lane</th><th>2 lane</th><th>4 lane</th></tr>";
+  for(var b=0;b<DP_RATES.length;b++){
+    var rname=DP_RATES[b][0], rrate=DP_RATES[b][1], renc=DP_RATES[b][2];
+    ds+="<tr><td>"+rname+"<span class='hint'> "+fmt(rrate,2)+"G</span></td>";
+    for(var c=0;c<3;c++){
+      var ln=DP_LANES[c], tt=rrate*ln;
+      ds+="<td>"+fmt(tt,2)+"<span class='hint'> / "+fmt(tt*renc,2)+"</span></td>";
+    }
+    ds+="</tr>";
+  }
+  $("tDp").innerHTML=ds;
+
+  var n8=pclk*24/1000, n12=pclk*36/1000;
+  var h8=minSpec(S.dh,n8), h12=minSpec(S.dh,n12);
+  var d8=minDpRate(n8,4), d12=minDpRate(n12,4);
+  $("bwHint").textContent="— 像素时钟 "+fmt(pclk,2)+" MHz";
+  $("bwConc").innerHTML=
+    "<div>8 bpc RGB 需 <b>"+fmt(n8,2)+" Gbit/s</b> → HDMI 至少 <b>"+(h8?h8.n+"（"+num(h8.t)+" Gbps）":"超出所有规格")+"</b>，"+dpAll(n8)+"</div>"+
+    "<div>12 bpc RGB 需 <b>"+fmt(n12,2)+" Gbit/s</b> → HDMI 至少 <b>"+(h12?h12.n+"（"+num(h12.t)+" Gbps）":"超出所有规格")+"</b>，"+dpAll(n12)+"</div>"+
+    "<div class='hint' style='margin-top:2px'>判定用有效载荷（TMDS 8b/10b、FRL 16b/18b、DP 8b/10b / 128b/132b），展示用总带宽</div>";
+}
+
+function render(box,src,label,q,fallback){
+  // 双标格式（59.94/60、23.976/24 等）标准表只列一个时钟值；按输入刷新率精确重算
+  var t=box, note="", eff=t.pc;
+  if(q&&q.vf&&src==="CEA-861"){   // 只有 CEA-861 的双标格式需要按 59.94/29.97 折算；DMT 表值本身就是该模式真实参数
+    var vstd=derived(t).vf, ratio=Math.abs(q.vf-vstd)/vstd;
+    if(ratio>0.0005){
+      if(ratio<0.05&&NTSC_RE.test(t.rd||"")){   // 59/29/23 这类整数输入 -> 按 NTSC 系数值
+        eff=t.pc*1000/1001;
+        note="输入 "+num(q.vf)+" Hz 按 NTSC 系 "+fmt(vstd*1000/1001,3)+" Hz 计算（标准表列 "+fmt(t.pc,3)+" MHz）";
+      }else{
+        eff=t.pc*q.vf/vstd;
+        note="按输入 "+fmt(q.vf,3)+" Hz 重算（标准表列 "+fmt(t.pc,3)+" MHz，为标称值）";
+      }
+    }
+  }
+  if(eff!==t.pc){var t2={};for(var k0 in t)t2[k0]=t[k0];t2.pc=eff;t=t2;}
+  var d=derived(t);
+  CUR={t:t,src:src,base:box,note:note};
+  $("resCard").style.display="";
+  $("bwCard").style.display="";
+  $("vicCard").style.display="";
+  $("srcHint").textContent="— "+label;
+  $("bPclk").textContent=fmt(t.pc,2);
+  $("bHf").textContent=fmt(d.hf/1e3,2);
+  $("bVf").textContent=fmt(d.vf,2)+(t.rd?" ("+t.rd+")":"")+" "+(t.i?"interlaced":"progressive");
+  $("bBw").textContent=fmt(t.pc*24/1e3,2);
+  renderTable(t);
+  renderBandwidth(t);
+  var mh="";
+  if(src==="CEA-861"){mh="已匹配 CEA-861 VIC "+t.id+"（"+t.w+"×"+t.h+(t.i?"i":"p")+"）";}
+  else if(src==="VESA DMT"){mh="已匹配 VESA DMT ID "+t.id+"（"+t.w+"×"+t.h+"）";}
+  else if(fallback){mh="标准表无此模式 · 按 VESA "+t.id+" 公式计算";}
+  else{mh=label;}
+  var mhFull=mh+(CUR.note?("　· "+CUR.note):"");
+  $("matchHint").textContent=mhFull;$("matchHint").title=mhFull;
+  var qs=parseQuery($("q").value), canStd=false, canCvt=false;
+  if(qs&&!qs.error){canStd=!!(findVic(qs)||findDmt(qs));canCvt=!!(qs.w&&qs.h);}
+  var ids=["CVT","CVT-RB","CVT-RBv2","CVT-RBv3"];
+  var curIx=(src==="VESA CVT")?Math.max(0,ids.indexOf(t.id)):-1;   // -1 = 当前显示的是标准表结果
+  function mkBtn(txt,active,enabled,onclick){
+    var st="padding:3px 8px;font-size:12px;margin-left:4px";
+    if(active)st+=";background:var(--acc);color:#fff;border-color:var(--acc)";
+    if(!enabled)st+=";opacity:.45";
+    return '<button style="'+st+'" '+(enabled?'onclick="'+onclick+'"':'disabled')+'>'+txt+'</button>';
+  }
+  var bs=[mkBtn("CTA",curIx===-1,canStd,"setStd()")];
+  for(var bi=0;bi<ids.length;bi++)bs.push(mkBtn(ids[bi],bi===curIx,canCvt,"setCvt("+bi+")"));
+  $("cvtSwitch").innerHTML=bs.join("");
+  $("vicBody").innerHTML=boxHtml(t,src);
+}
+
+function boxHtml(t,src){
+  var std=src==="CEA-861"?("CEA-861 VIC "+t.id):
+    (src==="VESA DMT"?("VESA DMT ID "+t.id):
+    (src==="VESA CVT"?("VESA "+t.id+" 公式计算"):"自定义"));
+  return "<dl class='kv'>"+
+    "<dt>标准来源</dt><dd>"+std+"</dd>"+
+    "<dt>分辨率 / 扫描</dt><dd>"+t.w+" × "+t.h+" "+(t.i?"隔行":"逐行")+"</dd>"+
+    "<dt>像素时钟</dt><dd>"+fmt(t.pc,3)+" MHz"+
+      (CUR&&CUR.base&&Math.abs(CUR.base.pc-t.pc)>0.0005?("　<span class='hint'>（标准表列 "+fmt(CUR.base.pc,3)+" MHz）</span>"):"")+"</dd>"+
+    "<dt>H Total × V Total</dt><dd>"+t.ht+" × "+t.vt+"</dd>"+
+    "<dt>宽高比</dt><dd>"+(t.x||"见标准表")+"</dd>"+
+    "</dl>";
+}
+
+/* ---- 主流程 ---- */
+function clearRes(){
+  $("resCard").style.display="none";
+  $("bwCard").style.display="none";
+  $("vicCard").style.display="none";
+  $("matchHint").textContent="";
+  CUR=null;
+}
+function run(){
+  var q=parseQuery($("q").value);
+  $("msg").innerHTML="";
+  if(q.error){$("msg").innerHTML="<span class='bad'>"+q.error+"</span>";return;}
+  if(q.vic!=null){
+    var v=findVic(q);
+    if(!v){$("msg").innerHTML="<span class='bad'>VIC "+q.vic+" 不在 CEA-861 表里（1–219）</span>";return;}
+    render(v,"CEA-861","CEA-861 VIC "+v.id,q);
+    return;
+  }
+  if(q.w&&q.h){
+    if(q.rb===0||q.rb===1||q.rb===2||q.rb===3){          // 显式 cvt / cvt-rb → 强制按公式算，不查标准表
+      var tq=cvtMode(q.w,q.h,q.vf||60,{rb:q.rb,inter:q.inter});
+      render(tq,"VESA CVT",tq.id+" 计算",q);
+      $("msg").innerHTML="<span class='hint'>已按指定方式用 VESA "+tq.id+" 公式计算（不查标准表）。</span>";
+      return;
+    }
+    var vv=findVic(q);
+    if(vv){render(vv,"CEA-861","CEA-861 VIC "+vv.id,q);return;}
+    var dd=findDmt(q);
+    if(dd){
+      if(String(dd.id).indexOf("CVT")===0){
+        render(dd,"VESA CVT","VESA DMT "+dd.w+"×"+dd.h+"（"+(dd.id==="CVT-RB"?"CVT-RB":"CVT")+" 现算）",q);
+      }else{
+        render(dd,"VESA DMT","VESA DMT ID "+dd.id,q);
+      }
+      $("msg").innerHTML="";
+      return;
+    }
+    // 标准表都没有 → 按 VESA CVT 公式现算（默认 Reduced Blanking）
+    var useRb = (q.rb===null||q.rb===undefined) ? 2 : q.rb;
+    var tc=cvtMode(q.w,q.h,q.vf||60,{rb:useRb,inter:q.inter});
+    render(tc,"VESA CVT",tc.id+" 计算",q,true);
+    $("msg").innerHTML="<span class='hint'>CEA-861 与 VESA DMT 表里都没有 "+q.w+"×"+q.h+(q.vf?("@"+q.vf+"Hz"):"")+"，已按 VESA "+tc.id+" 公式现算。</span>";
+    return;
+  }
+}
+
+function setStd(){
+  var v=String($("q").value||"").replace(/\s*(cvt-rbv?[123]|cvt-rb|cvt|rbv?[123]|rb)\s*$/i,"");
+  $("q").value=v;run();
+}
+
+function setCvt(v){
+  var q=parseQuery($("q").value);
+  if(!q.w)return;
+  var t=cvtMode(q.w,q.h,q.vf||60,{rb:v,inter:q.inter});
+  render(t,"VESA CVT",t.id+" 计算",q);
+}
+function toggleCvt(){setCvt(2);}
+
+function clearAll(){$("q").value="";$("msg").innerHTML="";$("resCard").style.display="none";$("bwCard").style.display="none";$("vicCard").style.display="none";CUR=null;$("q").focus();}
+
+/* ---- 复制 ---- */
+function fb(txt,ok){
+  var ta=document.createElement("textarea");ta.value=txt;
+  ta.style.cssText="position:fixed;left:-9999px;top:0";document.body.appendChild(ta);ta.select();
+  var r=false;try{r=document.execCommand("copy")}catch(e){}
+  document.body.removeChild(ta);ok(r);
+}
+function copyText(kind){
+  if(!CUR){return;}
+  var t=CUR.t,d=derived(t);
+  var txt="";
+  if(kind==="summary"){
+    txt=t.w+"x"+t.h+(t.i?"i":"p")+fmt(d.vf,2)+" · pclk "+fmt(t.pc,3)+" MHz · H "+t.ht+" / V "+t.vt+" · "+(CUR.src==="CEA-861"?("VIC "+t.id):(CUR.src==="VESA DMT"?("DMT "+t.id):"custom"));
+  }else if(kind==="json"){
+    txt=JSON.stringify({source:CUR.src,id:t.id,width:t.w,height:t.h,interlaced:!!t.i,
+      pixel_clock_mhz:t.pc,h_total:t.ht,v_total:t.vt,
+      h_front:t.hf,h_sync:t.hs,h_back:t.hb,h_pol:t.hp,
+      v_front:t.vf,v_sync:t.vs,v_back:t.vb,v_pol:t.vp,
+      h_freq_khz:Math.round(d.hf/10)/100,v_freq_hz:Math.round(d.vf*1000)/1000},null,2);
+  }else{
+    var L=[];
+    L.push("resolution   : "+t.w+"x"+t.h+(t.i?"i":"p")+" @ "+fmt(d.vf,3)+" Hz");
+    L.push("pixel clock  : "+fmt(t.pc,3)+" MHz");
+    L.push("");
+    L.push("H: active "+t.w+"  fp "+t.hf+"  sync "+t.hs+"  bp "+t.hb+"  blank "+d.hb+"  total "+t.ht+"  pol "+polEn(t.hp));
+    L.push("V: active "+t.h+"  fp "+t.vf+"  sync "+t.vs+"  bp "+t.vb+"  blank "+Math.round(d.vb)+"  total "+t.vt+"  pol "+polEn(t.vp));
+    L.push("");
+    L.push("h_freq "+fmt(d.hf/1e3,3)+" kHz   v_freq "+fmt(d.vf,3)+" Hz");
+    txt=L.join("\n");
+  }
+  fb(txt,function(ok){
+    var m=$("msg");
+    m.innerHTML=ok?"<span style='color:var(--ok)'>已复制</span>":"<span class='bad'>复制失败，请手动选中</span>";
+    setTimeout(function(){m.innerHTML="";},1400);
+  });
+}
+
+/* ---- 初始化 ---- */
+function $(id){return document.getElementById(id);}
+var CHIPS=["1080p60","1080p59.94","1080p50","720p60","2160p60","2160p30","4K120","1080i50","VIC 97","VIC 16","1440p60","4320p60"];
+function init(){
+  var h="";
+  CHIPS.forEach(function(c){h+="<span class='chip' onclick=\"setQ('"+c+"')\">"+c+"</span>";});
+  $("chips").innerHTML=h;
+  $("q").addEventListener("keydown",function(e){if(e.key==="Enter")run();});
+  $("q").value="3840x2160p60";
+  run();
+}
+function setQ(v){$("q").value=v;run();}
+init();
+
+</script>
+</body>
+</html>

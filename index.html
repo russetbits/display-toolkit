@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Display Toolkit — 显示数据工具集</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--bd:#d8dee8;--tx:#1c2733;--ac:#1a63c9}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.6 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:#16324f;color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20}
+header h1{margin:0;font-size:16px;font-weight:600;color:#fff}
+header .sub{font-size:12.5px;opacity:.72;font-weight:400}
+header .nav{margin-left:auto;display:flex;gap:16px;align-items:baseline}
+header .nav a{color:#fff;opacity:.82;text-decoration:none;font-size:13px}
+header .nav a:hover{opacity:1;text-decoration:underline}
+header .nav a.cur{opacity:.5;cursor:default}
+header .nav a.cur:hover{text-decoration:none}
+.wrap{max-width:860px;margin:36px auto;padding:0 20px;display:grid;gap:16px}
+a.card{display:block;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;text-decoration:none;color:var(--tx);transition:.15s}
+a.card:hover{border-color:var(--ac);box-shadow:0 2px 10px rgba(26,99,201,.12);transform:translateY(-1px)}
+.card h2{margin:0 0 6px;font-size:17px;color:var(--ac)}
+.card p{margin:0;color:#5b6b7c;font-size:13px}
+.tag{display:inline-block;background:#e8f1fb;color:var(--ac);border-radius:4px;padding:1px 7px;font-size:12px;margin-left:6px}
+footer{max-width:860px;margin:8px auto 40px;padding:0 20px;color:#7d8b9a;font-size:12px;line-height:1.8}
+footer code{background:#eef2f7;border-radius:3px;padding:1px 5px}
+</style></head><body>
+<header><h1>Display Toolkit</h1><span class="sub">显示数据工具集</span><span class="nav"><a href="edid/">EDID 数据库</a><a href="dpcd/">DPCD 速查</a><a href="timing/">时序计算器</a><a href="./" class="cur">首页</a></span></header>
+<div class="wrap">
+  <a class="card" href="edid/"><h2>EDID 数据库 <span class="tag">sink 能力查询</span></h2>
+    <p>显示器 / TV / AVR 的 EDID 样本库：按品牌、接口、分辨率、EDID 版本检索；单条详情含完整解码（preferred timing、CTA 能力、DisplayID 高刷模式、HDR、深色、音频等）。</p></a>
+  <a class="card" href="dpcd/"><h2>DPCD 速查与解析 <span class="tag">DP 链路</span></h2>
+    <p>DPCD 寄存器地址速查（DP 2.1a）；粘贴 sink 的 DPCD dump 即可解析出链路能力、DSC / FEC / MST / 面板 replay 等能力摘要。</p></a>
+  <a class="card" href="timing/"><h2>视频时序计算器 <span class="tag">CEA-861 / VESA DMT</span></h2>
+    <p>一行输入（4K60 / 1080i50 / VIC 97）即得完整时序：pixel clock、H/V 的 active/porch/sync/total、行频场频；并判定 HDMI TMDS 与 FRL 档位、DisplayPort 链路档位是否够用。</p></a>
+</div>
+<footer>
+  <p>纯静态页面，无后端、无外部依赖。数据来源：EDID 样本取自 <a href="https://github.com/linuxhw/EDID">linuxhw/EDID</a> 公开数据集；时序表依据 CEA-861 / VESA DMT / CVT / HDMI 2.1 / DP 2.1 规范。</p>
+</footer>
+</body></html>

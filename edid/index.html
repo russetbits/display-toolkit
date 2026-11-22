@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>EDID 数据库查询</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f7f8fa;--card:#fff;--bd:#d8dce3;--tx:#1f2733;--mut:#6b7686;--acc:#1a63c9;--ok:#1a7f37;--bad:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;padding-bottom:56px;font:14px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:#16324f;color:#fff;padding:10px 18px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+header h1{font-size:17px;margin:0}
+header .cnt{color:#9fc3e8;font-size:13px}
+main{max-width:1280px;margin:0 auto;padding:14px}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;margin-bottom:12px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filters input,.filters select,.ops input,.ops select,.ops textarea{padding:5px 8px;border:1px solid var(--bd);border-radius:5px;font-size:13px;background:#fff}
+.filters input[type=text]{min-width:180px;flex:1}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+#tbl col.c1{width:4%}#tbl col.c2{width:12%}#tbl col.c3{width:22%}#tbl col.c4{width:9%}#tbl col.c5{width:10%}#tbl col.c6{width:12%}#tbl col.c7{width:8%}#tbl col.c8{width:10%}#tbl col.c9{width:9%}#tbl col.c10{width:6%}
+td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+th{background:#eef1f5;text-align:left;padding:6px 8px;border-bottom:2px solid var(--bd);cursor:pointer;white-space:nowrap;position:sticky;top:0}
+td{padding:5px 8px;border-bottom:1px solid #edf0f4}
+tr.row:hover{background:#f0f6ff;cursor:pointer}
+.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px}
+.b-dp{background:#e3f0ff;color:#1a63c9}.b-hdmi1\.4{background:#fdeeee;color:#c0392b}.b-hdmi2\.0{background:#fde9d9;color:#b35c00}.b-hdmi2\.1{background:#ffe8f0;color:#b3246a}.b-unknown{background:#eee;color:#777}.b-dvi{background:#eef1f4;color:#5b6b7c}.b-analog{background:#f3eefb;color:#6b4fa0}.b-other{background:#eef1f4;color:#8a97a5}
+.b-ok{background:#e6f4ea;color:var(--ok)}.b-bad{background:#fdecea;color:var(--bad)}
+.b-mut{background:#eef1f4;color:#8a97a5}.b-warn{background:#fff6e0;color:#9a6a00}
+.tags{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;vertical-align:middle}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.detail{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px;margin:10px 0}
+.detail h3{margin:2px 0 10px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:3px 10px;font-size:13px}
+.kv dt{color:var(--mut)}.kv dd{margin:0}
+pre.hex{background:#101820;color:#9fe19f;padding:10px;border-radius:6px;overflow:auto;max-height:260px;font-size:11px;line-height:1.5;display:table;width:auto;max-width:100%}
+button{padding:5px 12px;border:1px solid var(--bd);border-radius:5px;background:#fff;cursor:pointer;font-size:13px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.hint{color:var(--mut);font-size:12px}
+.err{color:var(--bad);font-size:12px;white-space:pre-wrap}
+.okmsg{color:var(--ok);font-size:12px}
+.drop{border:2px dashed var(--bd);border-radius:8px;padding:18px;text-align:center;color:var(--mut);margin:8px 0;font-size:13px}
+.drop.over{border-color:var(--acc);background:#f0f6ff}
+.fld{margin:8px 0}.fld label{display:inline-block;width:130px;color:var(--mut)}
+.fld input,.fld textarea{width:calc(100% - 140px);padding:5px 8px;border:1px solid var(--bd);border-radius:5px;font:inherit}
+.fld textarea{vertical-align:top;height:110px;font-family:ui-monospace,monospace;font-size:12px;resize:none;box-sizing:border-box;padding-bottom:34px}
+[readonly]{background:#f2f3f5;color:#555}
+header .hlink{color:#a8c8e8;font-size:12.5px;text-decoration:none;margin-left:16px}
+header .hlink:hover{color:#fff;text-decoration:underline}
+.hxbox{width:700px;max-width:100%;height:78px;font:11px/16.5px monospace;box-sizing:border-box;resize:vertical;
+  border:1px solid var(--bd);border-radius:6px;padding:8px 10px;background:#fcfdfe}
+.brow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px}
+#pmsg{flex:1 1 120px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brow .sepv{width:1px;height:18px;background:var(--bd)}
+#sumTitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+th[data-k]{cursor:pointer;user-select:none;white-space:nowrap}
+pre.hex .off{user-select:none;-webkit-user-select:none;color:#7d8b9a;cursor:default}
+th[data-k]:hover{color:var(--acc)}
+th[data-k].asc::after{content:" ▲";font-size:9px;color:var(--acc)}
+th[data-k].desc::after{content:" ▼";font-size:9px;color:var(--acc)}
+#copyBtn{padding:3px 10px;font-size:12px}
+#sumBody h4{margin:10px 0 4px;color:#334}
+.footbar{margin:22px 0 40px;padding-top:14px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:10px;align-items:center}
+.footbar .fhint{color:#6b7a8c;font-size:12px;margin-right:auto}
+#topgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:12px;height:calc(100vh - 215px);min-height:560px;max-height:900px;margin-bottom:12px}
+.tg-col{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+.tg-col > .panel{margin-bottom:0}
+dl.kv.hideempty dt.empty,dl.kv.hideempty dd.empty{display:none}
+.mask{position:fixed;inset:0;background:rgba(16,24,32,.45);display:none;z-index:60}
+.mask.on{display:block}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,92vw);
+ max-height:88vh;overflow:auto;background:#fff;border-radius:10px;padding:18px 20px;
+ box-shadow:0 20px 52px rgba(0,0,0,.3);z-index:61;display:none}
+.modal.on{display:block}
+.modal .fld{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin:8px 0}
+.modal .fld label{font-size:12px;color:#5b6b7c}
+#parsePanel{flex:0 0 auto}
+#sumPanel,#metaPanel{flex:1 1 auto;overflow:hidden}
+@media (max-width:1100px){#topgrid{grid-template-columns:1fr;height:auto}
+  #sumPanel,#metaPanel{max-height:420px}}
+
+/* ---- 统一 header（三页共用） ---- */
+header{background:#16324f;color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20}
+header h1{margin:0;font-size:16px;font-weight:600;color:#fff;letter-spacing:0}
+header .sub{font-size:12.5px;opacity:.72;font-weight:400}
+header .nav{margin-left:auto;display:flex;gap:16px;align-items:baseline}
+header .nav a{color:#fff;opacity:.82;text-decoration:none;font-size:13px}
+header .nav a:hover{opacity:1;text-decoration:underline}
+header .nav a.cur{opacity:.5;cursor:default}
+header .nav a.cur:hover{text-decoration:none}
+</style>
+</head>
+<body>
+<header><h1>EDID 数据库</h1><span class="sub" id="cnt">正在加载公开数据集…</span><span class="nav"><a href="../edid/" class="cur">EDID 数据库</a><a href="../dpcd/">DPCD 速查</a><a href="../timing/">时序计算器</a><a href="../">首页</a></span></header>
+<main>
+<div id="topgrid">
+<div class="tg-col">
+<div class="panel" id="parsePanel">
+  <h2>① 粘贴 EDID 原始 hex 解析</h2>
+  <textarea id="edidhex" class="hxbox" placeholder="00 FF FF FF FF FF FF FF 00 …（支持空格 / 冒号 / 换行分隔；长度需为 128 字节整数倍，第 2 块起为 CTA-861 / DisplayID 扩展块）"></textarea>
+  <div class="brow">
+    <button class="pri" onclick="parsePaste()">解析</button>
+    <button onclick="pasteSample()">填入样例</button>
+    <button onclick="pickEdidFile()" title="从 .xml / .bin / .txt 读取 EDID 并自动解析">选择文件</button>
+    <button onclick="clearPaste()">清空</button>
+    <input type="file" id="edidFile" accept=".xml,.bin,.txt,.edid,.hex,text/plain" style="display:none">
+    <span id="pmsg" class="hint"></span>
+  </div>
+  <div class="hint" style="margin-top:5px">粘贴后点「解析」；成功后会显示解码摘要与元数据。</div>
+</div>
+<div class="panel" id="sumPanel" style="display:flex;flex-direction:column;min-height:0">
+  <h2 id="sumTitle"><span class="hint">可读摘要 — 点下方表格任一记录查看</span></h2>
+  <div id="sumBody" style="flex:1 1 auto;overflow:auto;min-height:0"></div>
+</div>
+</div>
+<div class="tg-col">
+<div class="panel" id="metaPanel" style="display:flex;flex-direction:column;min-height:0">
+  <h2 style="display:flex;align-items:center">② 元数据<label class="hint" style="font-weight:400;margin-left:auto;cursor:pointer"><input type="checkbox" id="showEmpty" onchange="toggleEmpty(this.checked)"> 显示空字段</label></h2>
+  <div id="metaBody" style="flex:1 1 auto;overflow:auto;min-height:0"><span class="hint">点下方表格任一记录查看</span></div>
+</div>
+</div>
+</div>
+
+<div id="querybox">
+  <div class="panel"><div class="filters">
+    <input type="text" id="q" placeholder='查询：纯文本=关键词；可混条件，如 brand=LG interface=dp ver=1.4 res=2160（字段：brand/interface/ver/res）'>
+    <button onclick="render()">查询</button><button onclick="resetF()">清空</button>
+  </div><div class="hint" style="margin-top:2px" id="condtips">支持条件：brand=LG · interface=dp|hdmi1.4|hdmi2.0|hdmi2.1|dvi|analog · ver=1.3|1.4 · res=2160|4k|1080 · 多条件空格分隔，与关键词可混用</div><div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between"><div class="hint"><span id="matchcnt"></span> <span id="rowsort" style="color:var(--acc)"></span></div><span style="display:flex;align-items:center;gap:8px"><label class="hint">显示行数 <select id="fRows" onchange="saveRows()"><option>10</option><option>15</option><option>20</option><option>50</option><option>100</option><option value="0">全部</option></select></label></span></div></div>
+  <div id="tblwrap" style="overflow:auto"><table id="tbl">
+    <colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7"><col class="c8"><col class="c9"><col class="c10"></colgroup>
+    <thead><tr><th>#</th><th data-k="id">id</th><th data-k="name">name</th>
+    <th data-k="brand">brand</th>
+    <th data-k="interface">interface</th>
+    <th data-k="resolution">分辨率</th>
+    <th data-k="edid_version">EDID 版本</th>
+    <th data-k="block_count">blocks</th>
+    <th>尺寸</th><th>checksum</th></tr></thead>
+    <tbody></tbody></table></div>
+</div>
+
+<div id="detailbox" class="detail" style="display:none"></div>
+<div id="editbox" class="detail" style="display:none"></div>
+<input type="file" id="libFile" accept=".jsonl,.json,text/plain" style="display:none">
+
+<div class="mask" id="saveMask" onclick="closeSave()"></div>
+<div class="modal" id="saveModal">
+  <h3 style="margin:0 0 4px">存为新记录</h3>
+  <div class="hint" id="saveSummary" style="margin-bottom:10px"></div>
+  <div class="fld"><label>来源文件 / 场景</label><input id="aSrc" placeholder="如 edid-dump.xml / 试验记录（可空）"></div>
+  <div class="fld"><label>来源</label><input id="aOrig" placeholder="manual / capture / dump（可空）"></div>
+  <div class="fld"><label>备注</label><input id="aNotes" placeholder="可空"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button onclick="closeSave()">取消</button>
+    <button class="pri" onclick="doSave()">确认</button>
+  </div>
+  <div id="aMsg" class="hint" style="margin-top:8px"></div>
+</div>
+</main>
+<script>
+"use strict";
+var DATA=[], RECS=[], RECFULL={};
+var LASTFILE=null, CUR=null, SORTK=null, SORTDIR=1, PENDING=null;
+function showTab(t){$("editbox").style.display="none";
+ if(t==="detail"){$("detailbox").style.display="block";window.scrollTo(0,0);return}
+ $("detailbox").style.display="none";$(t).style.display="block";window.scrollTo(0,0);}
+function loadText(text,name){var rows=[];var lines=text.split(/\r?\n/);
+ for(var i=0;i<lines.length;i++){var line=lines[i].trim();if(!line)continue;
+  try{rows.push(JSON.parse(line))}catch(e){alert(name+" 第"+(i+1)+"行 JSON 解析失败: "+e.message);return}}
+ if(!rows.length||!rows[0].id){alert("文件不含有效记录");return}
+ RECS=rows;initUI();
+ $("pmsg").innerHTML='<span class="badge b-ok">已导入 records.jsonl：'+RECS.length+' 条（仅当前浏览器生效）</span>';
+ $("cnt").textContent="已加载外部数据 "+RECS.length+" 条";render();}
+
+function pickJsonl(){var f=$("libFile");if(f)f.click();}
+function bindJsonl(){
+ var f=$("libFile");if(!f||f._bound)return;f._bound=1;
+ f.addEventListener("change",function(){
+  var file=f.files&&f.files[0];if(!file)return;
+  var rd=new FileReader();
+  rd.onload=function(){loadText(String(rd.result),file.name);};
+  rd.onerror=function(){$("pmsg").innerHTML='<span class="badge b-bad">文件读取失败</span>';};
+  rd.readAsText(file,"utf-8");
+  f.value="";
+ });}
+
+/* ---------- 基础 ---------- */
+function $(id){return document.getElementById(id)}
+function esc(s){s=String(s==null?"":s);return s.replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+/* ---------- 行数控制 ---------- */
+function rowLimit(){var v=$("fRows").value;return v==="0"?0:parseInt(v||"10")}
+function applyRows(){var n=rowLimit(),h=$("tblwrap");if(!h)return;h.style.maxHeight=n?(n*36+40)+"px":"62vh"}
+function saveRows(){try{localStorage.setItem("edidRows",$("fRows").value)}catch(e){}applyRows()}
+function loadRows(){try{var v=localStorage.getItem("edidRows");if(v)$("fRows").value=v}catch(e){}applyRows()}
+
+/* ---------- 统一查询 ---------- */
+function parseQ(){
+ var parts=($("q").value||"").trim().toLowerCase().split(/\s+/);
+ var c={words:[],brand:null,interface:null,ver:null,res:null};
+ for(var i=0;i<parts.length;i++){
+  var p=parts[i];if(!p)continue;
+  var m=p.match(/^(brand|interface|if|ver|res)=(.+)$/);
+  if(m){var k=m[1]==="if"?"interface":m[1];c[k]=m[2]}else c.words.push(p);
+ }
+ return c;}
+
+function match(r,cond){
+ if(!cond)cond=parseQ();
+ var d=r.decoded||{};
+ var hay=[r.id,r.name,r.model,r.brand,r.notes,r.source_origin,
+  d.product_name,r.source_file,r.interface,r.edid_version].join(" ").toLowerCase();
+ for(var i=0;i<cond.words.length;i++)if(hay.indexOf(cond.words[i])<0)return false;
+ if(cond.brand){var bw=cond.brand;
+  var bhit=String(r.brand||"").toLowerCase()===bw||hay.indexOf(bw)>=0;
+  if(!bhit)return false;}
+ if(cond.interface&&String(r.interface||"").toLowerCase()!==cond.interface)return false;
+ if(cond.ver&&String(r.edid_version||"").toLowerCase().indexOf(cond.ver)<0)return false;
+ if(cond.res){
+  var t=d.preferred_timing||{},mx=d.max_resolution||[0,0],want=cond.res,ok=false;
+  var alias={"4k":[3840,2160],"1080":[1920,1080],"1440":[2560,1440],"2160":[3840,2160]};
+  if(alias[want]){var w=alias[want];
+   if((t.h===w[0]&&t.v===w[1])||(mx[0]===w[0]&&mx[1]===w[1]))ok=true;
+   else if(t.v===w[1]||mx[1]===w[1])ok=true;
+  }else{
+   var mm=want.match(/^(\d+)x(\d+)$/);
+   if(mm){if((t.h==mm[1]&&t.v==mm[2])||(mx[0]==mm[1]&&mx[1]==mm[2]))ok=true;}
+   else{var n2=parseInt(want,10);
+    if(n2&&(t.h===n2||t.v===n2||mx[0]===n2||mx[1]===n2))ok=true;}
+  }
+  if(!ok)return false;
+ }
+ return true;}
+
+function cmp(a,b){if(!SORTK)return 0;
+ function gv(r){if(SORTK==="hdmi_spec")return (r.decoded&&r.decoded.hdmi_spec)||"";return r[SORTK]==null?"":r[SORTK]}
+ var va=gv(a),vb=gv(b);
+ if(va<vb)return -SORTDIR;if(va>vb)return SORTDIR;return 0;}
+
+/* ---------- 表格渲染 ---------- */
+var HITS=[], SHOWN=10, STEP=20, LASTQ="";
+function render(){
+ var cond=parseQ(); HITS=[];
+ for(var i=0;i<RECS.length;i++)if(match(RECS[i],cond))HITS.push(RECS[i]);
+ HITS.sort(cmp);
+ var qk=JSON.stringify(cond);
+ if(qk!==LASTQ){SHOWN=10;LASTQ=qk}
+ drawRows();
+ var ths=document.querySelectorAll("th[data-k]");
+ for(var t2=0;t2<ths.length;t2++){var tk=ths[t2].getAttribute("data-k");
+  ths[t2].className=(tk===SORTK?(SORTDIR>0?"asc":"desc"):"");}
+ $("rowsort").textContent=SORTK?("已按 "+(document.querySelector('th[data-k="'+SORTK+'"]')||{textContent:SORTK}).textContent.replace(/[▲▼\s]/g,"")+(SORTDIR>0?" 升序":" 降序")):"";
+ applyRows();}
+
+function drawRows(){
+ var n=Math.min(HITS.length,SHOWN), trs=[];
+ for(var k=0;k<n;k++){var r=HITS[k],d=r.decoded||{};
+  var sz=d.physical_size_cm?d.physical_size_cm.join("×")+"cm":"";
+  var resTxt=(function(){var dd=r.decoded||{};
+   if(dd.preferred_timing)return dd.preferred_timing.h+"×"+dd.preferred_timing.v+"@"+Math.round(dd.preferred_timing.hz);
+   if(dd.max_resolution)return dd.max_resolution[0]+"×"+dd.max_resolution[1];
+   return "—"})();
+  trs.push('<tr class="row" onclick="showDetail(\''+r.id+'\')"><td>'+(k+1)+'</td><td class="mono">'+esc(r.id)+'</td>'
+   +'<td>'+esc(d.product_name?((r.brand?r.brand+"_":"")+d.product_name):r.name)+'</td><td>'+esc(r.brand)+'</td>'
+   +'<td><span class="badge b-'+esc(r.interface)+'">'+esc(r.interface)+'</span></td>'
+   +'<td class="mono">'+esc(resTxt)+'</td>'
+   +'<td>'+esc(r.edid_version)+'</td><td>'+r.block_count+'</td>'
+   +'<td>'+esc(sz)+'</td><td class="mono">'+(r.checksum_ok===false?'<span class="badge b-bad">bad</span>':'ok')+'</td></tr>');}
+ var more = n<HITS.length ? '<tr><td colspan="10" style="text-align:center;padding:14px;color:#7d8b9a">滚动到底部继续加载（已显示 '+n+' / '+HITS.length+'）</td></tr>' : "";
+ $("tbl").tBodies[0].innerHTML=trs.length?(trs.join("")+more):'<tr><td colspan="10" style="text-align:center;padding:24px;color:#888">无匹配记录（试试放宽筛选条件或点「清空」）</td></tr>';
+ var full=(RECS.length>=(TOTAL||RECS.length));
+ $("matchcnt").textContent="命中 "+HITS.length+" 条"+(full?"":"（索引已载入 "+RECS.length+" / "+(TOTAL||RECS.length)+"，搜索时自动补全）")+(n<HITS.length?" · 已显示 "+n:"");
+}
+
+function moreRows(){
+ if(SHOWN<HITS.length){SHOWN+=STEP;drawRows();return}
+ if(!ALLDONE){loadShard(NEXTIDX).then(function(n2){if(n2)render()}).catch(function(){})}
+}
+
+/* 滚动到底部自动加载更多（容器内滚动 + 页面滚动都监听） */
+(function bindScroll(){
+ function maybe(el){
+  if(!el||el._moreBound)return; el._moreBound=1;
+  el.addEventListener("scroll",function(){
+   if(this.scrollTop+this.clientHeight>=this.scrollHeight-120)moreRows();
+  });
+ }
+ function onWin(){
+  var d=document.documentElement;
+  if(d.scrollTop+d.clientHeight>=d.scrollHeight-160)moreRows();
+ }
+ window.addEventListener("scroll",onWin);
+ document.addEventListener("DOMContentLoaded",function(){maybe(document.getElementById("tblwrap"))});
+ setTimeout(function(){maybe(document.getElementById("tblwrap"))},0);
+})();
+
+function resetF(){$("q").value="";render()}
+function updCount(){$("cnt").textContent="共 "+RECS.length+" 条（含本地修改）"}
+
+function pickEdidFile(){var f=$("edidFile");if(f)f.click();}
+function bindEdidFile(){
+ var f=$("edidFile");if(!f||f._bound)return;f._bound=1;
+ f.addEventListener("change",function(){
+  var file=f.files&&f.files[0];if(!file)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var toks=hexToks(String(rd.result));
+    if(toks.length<128){
+      $("pmsg").innerHTML='<span class="badge b-bad">文件里没找到足够的 EDID hex（'+toks.length+' 字节，至少 128）</span>';
+      return;
+    }
+    $("edidhex").value=toks.join(" ");
+    LASTFILE=file.name;
+    parsePaste();
+    $("pmsg").innerHTML+=' <span class="hint">（'+esc(file.name)+'）</span>';
+  };
+  rd.onerror=function(){$("pmsg").innerHTML='<span class="badge b-bad">文件读取失败</span>';};
+  rd.readAsText(file,"utf-8");
+  f.value="";
+ });}
+
+function openSave(){
+ if(!CUR||CURSRC!=="paste")return;
+ var d=CUR.decoded||{};
+ $("saveSummary").textContent="EDID "+CUR.edid_version+" · "+CUR.block_count+" 块 · "
+   +(d.product_name||"未命名")+" · 接口 "+CUR.interface;
+ $("aMsg").innerHTML="";
+ if(!$("aSrc").value)$("aSrc").value=LASTFILE||"";
+ if(!$("aNotes").value)$("aNotes").value="网页粘贴解析";
+ $("saveMask").classList.add("on");$("saveModal").classList.add("on");
+ $("aSrc").focus();
+}
+function closeSave(){
+ $("saveMask").classList.remove("on");$("saveModal").classList.remove("on");
+}
+
+function doSave(){
+ if(!CUR||CURSRC!=="paste")return;
+ var blocks=CUR.blocks, hex=blocks.join("").toUpperCase();
+ var id="edid_"+sha256hex(hex).slice(0,8);
+ for(var i=0;i<RECS.length;i++)if(RECS[i].id===id){
+   $("aMsg").innerHTML='<span class="err">库里已有相同内容的记录：'+esc(id)+'</span>';return}
+ var d=CUR.decoded||{};
+ var brand=d.manufacturer||null;
+ var model=d.product_name||"UNKNOWN";
+ var name=((brand||"UNKNOWN")+"_"+model).replace(/\s+/g,"_");
+ var dup=false;
+ for(var j=0;j<RECS.length;j++)if(RECS[j].name===name){dup=true;break}
+ if(dup)name=name+"__"+id.slice(5);
+ var rec={id:id,name:name,brand:brand,model:model,interface:CUR.interface,
+  edid_version:CUR.edid_version,block_count:blocks.length,checksum_ok:true,
+  manufacturer_id:brand,product_code:d.product_code||null,
+  physical_size_cm:d.physical_size_cm||null,
+  source_file:$("aSrc").value||null,raw_file:null,
+  source_origin:$("aOrig").value||null,
+  captured_at:null,format:"manual_web",decoded:d,decoded_unknown:[],
+  notes:$("aNotes").value||null,blocks:blocks};
+ RECS.push(rec);RECS=RECS.slice();
+ closeSave();render();
+ $("pmsg").innerHTML='<span class="badge b-ok">已加入当前视图：'+esc(id)+'</span>';
+ showDetail(id);
+}
+
+function initUI(){
+ bindJsonl();bindEdidFile();loadRows();SORTK=null;SORTDIR=1;render();
+ if(RECS&&RECS.length)showDetail(RECS[0].id);}
+var TOTAL=0, NSHARD=0, NEXTIDX=0, LOADING=false, ALLDONE=false;
+function loadShard(i){
+ if(LOADING||i>=NSHARD)return Promise.resolve(0);
+ LOADING=true;
+ var nm=("00"+i).slice(-3);
+ return fetch("../data/idx/"+nm+".json").then(function(r){return r.json()}).then(function(list){
+  RECS=RECS.concat(list); NEXTIDX=i+1; LOADING=false;
+  if(NEXTIDX>=NSHARD)ALLDONE=true;
+  return list.length;
+ }).catch(function(e){LOADING=false;throw e});
+}
+function loadAll(){
+ var chain=Promise.resolve();
+ for(var i=NEXTIDX;i<NSHARD;i++)(function(k){chain=chain.then(function(){return loadShard(k)})})(i);
+ return chain;
+}
+function loadIndex(){
+ var st=document.getElementById("pmsg");
+ if(st)st.innerHTML='<span class="badge">正在加载公开 EDID 数据集…</span>';
+ fetch("../data/idx/meta.json").then(function(r){return r.json()}).then(function(m){
+  TOTAL=m.total;NSHARD=m.shards;
+  return loadShard(0).then(function(){
+   if(st)st.innerHTML='<span class="badge b-ok">公开 EDID 数据集 '+TOTAL+' 条（linuxhw/EDID）</span>';
+   var c=document.getElementById("cnt");if(c)c.textContent="公开数据集 "+TOTAL+" 条 · linuxhw/EDID";
+   initUI();
+  });
+ }).catch(function(e){
+  if(st)st.innerHTML='<span class="badge b-bad">数据集加载失败：'+e+'</span>';
+ });}
+loadIndex();
+
+var ths=document.querySelectorAll("th[data-k]");
+for(var ti=0;ti<ths.length;ti++)ths[ti].onclick=function(){var k=this.getAttribute("data-k");
+ if(SORTK===k)SORTDIR=-SORTDIR;else{SORTK=k;SORTDIR=1}render()};
+function qInput(){
+ render();                                    /* 先出当前已载入部分的结果 */
+ if(!ALLDONE)loadAll().then(function(){LASTQ="";render()}).catch(function(){});
+}
+$("q").oninput=qInput;$("q").onchange=qInput;
+
+/* 详情 */
+function showDetail(id){CUR=null;
+ for(var i=0;i<RECS.length;i++)if(RECS[i].id===id){CUR=RECS[i];break}
+ if(!CUR)return;
+ if(RECFULL[id]){CUR=RECFULL[id];CURSRC="lib";renderSum();}
+ else if(CUR.blocks){CURSRC="lib";renderSum();}
+ else{
+  var shk=id.slice(-1);
+  $("sumBody").innerHTML='<div class="hint" style="padding:10px">正在加载记录详情…</div>';
+  fetch("../data/rec/"+shk+".json").then(function(r){return r.json()}).then(function(list){
+   for(var j=0;j<list.length;j++)RECFULL[list[j].id]=list[j];
+   if(RECFULL[id]&&CUR&&CUR.id===id){CUR=RECFULL[id];CURSRC="lib";renderSum();}
+  }).catch(function(e){
+   $("sumBody").innerHTML='<div class="bad" style="padding:10px">详情加载失败：'+(e&&e.message?e.message:e)+'</div>';
+  });
+ }
+ var r=$("sumPanel").getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)$("sumPanel").scrollIntoView({behavior:"smooth",block:"nearest"});}
+
+function toggleEmpty(on){
+ var dl=document.querySelector("#metaBody dl.kv");
+ if(dl)dl.className="kv"+(on?"":" hideempty");
+}
+
+function tmdsMaxHTML(d){
+ var a=(d.max_tmds_clock!=null?d.max_tmds_clock:0);
+ var hf=(d.hdmi_forum_vsdb||{});
+ var b=hf.max_tmds_char_rate_mhz||0;
+ if(!a&&!b)return "—";
+ var rows=[];
+ if(b)rows.push('<div>HF-VSDB <b>'+esc(b)+' MHz</b></div>');
+ if(a&&d.vsdb_hdmi)rows.push('<div>H14b-VSDB <b>'+esc(a)+' MHz</b></div>');
+ return rows.length?rows.join(""):"—";
+}
+
+function libMetaHTML(){var d=CUR.decoded||{},unk=CUR.decoded_unknown||[];
+ function kv(k,v){var e=(v==="—"||v===""||v==null);return '<dt'+(e?' class="empty"':'')+'>'+esc(k)+'</dt><dd'+(e?' class="empty"':'')+'>'+(e?"—":v)+'</dd>'}
+ return [kv("id",'<span class="mono">'+esc(CUR.id)+"</span>"),
+  kv("name",esc(CUR.name)),
+  kv("brand / model",esc(CUR.brand)+" / "+esc(CUR.model)),
+  kv("interface",'<span class="badge b-'+esc(CUR.interface)+'">'+esc(CUR.interface)+"</span>"),
+  kv("edid_version / blocks",esc(CUR.edid_version)+" / "+CUR.block_count),
+  kv("physical_size",d.physical_size_cm?d.physical_size_cm.join(" × ")+" cm":"—"),
+  kv("product_name",esc(d.product_name)),
+  kv("max_tmds_clock",tmdsMaxHTML(d)),
+  kv("hdmi_spec",d.hdmi_spec?esc(d.hdmi_spec):"—"),
+  kv("vsdb_hdmi",d.vsdb_hdmi?vsdbHuman(d.vsdb_hdmi):"—"),
+  kv("hdmi_forum_vsdb",d.hdmi_forum_vsdb?hfHuman(d.hdmi_forum_vsdb):"—"),
+  kv("native_vic",d.native_vic!=null?d.native_vic:"—"),
+  kv("serial_number",d.serial_number?esc(d.serial_number):"—"),
+  kv("deep_color",d.deep_color&&d.deep_color.length?esc(d.deep_color.join("、")):"—"),
+  kv("source_file",esc(CUR.source_file)),kv("raw_file",esc(CUR.raw_file)),
+  kv("source_origin",esc(CUR.source_origin||"—")),kv("captured_at",esc(CUR.captured_at||"—")),
+  kv("format",esc(CUR.format)),kv("decoded_unknown",unk.length?esc(unk.join(", ")):"—"),
+  kv("notes",esc(CUR.notes||"—"))].join("");}
+
+function blocksHexHTML(){var out="";
+ for(var b=0;b<CUR.blocks.length;b++){
+  var hx=CUR.blocks[b].toUpperCase();var hexRows=[];
+  for(var o=0;o<hx.length;o+=32)hexRows.push('<span class="off">'+("000"+(o/2).toString(16)).slice(-4)+'  </span>'+hx.substr(o,32).replace(/(..)/g,"$1 "));
+  out+='<div style="margin:4px 0"><span class="hint">block '+b+'</span><pre class="hex">'+hexRows.join(String.fromCharCode(10))+"</pre></div>";}
+ return out;}
+
+/* VSDB 人类可读渲染 */
+function flag(v){return v?"<b style=\"color:#1a7f37\">支持</b>":"<span style=\"color:#888\">不支持</span>"}
+function prettyKey(k){
+ var m={max_frl_rate:"FRL",max_frl:"FRL",vrr:"VRR",allm:"ALLM",dsc:"DSC",scdc_present:"SCDC",scdc:"SCDC",
+  rr_capable:"RR",latency_present:"延迟",hdmi_1_4:"HDMI 1.4",dvi_dual:"DVI dual",max_tmds_mhz:"TMDS",
+  max_tmds_char_rate_mhz:"TMDS",readiness:"ready",te:"TE",msa_timing_par_ignored:"MSA 并行"};
+ if(m[k])return m[k];
+ return k.replace(/_/g," ").toUpperCase();}
+
+function fmtExtra(k,v){
+ var name=prettyKey(k);
+ if(v===true)return '<span class="badge b-ok">'+esc(name)+'</span>';
+ if(v===false)return '<span class="badge b-mut">'+esc(name)+' ✗</span>';
+ var raw,short;
+ if(v&&typeof v==="object"&&v.min!==undefined&&v.max!==undefined)raw=v.min+"–"+v.max;
+ else raw=JSON.stringify(v);
+ if(typeof raw==="string"&&raw.charAt(0)==='"')raw=raw.slice(1,-1);
+ short=raw.length>20?raw.slice(0,20)+"…":raw;
+ return '<span class="badge" title="'+esc(k+"="+JSON.stringify(v))+'">'+esc(name)+' '+esc(short)+'</span>';}
+
+function truncV(x){
+ var t=JSON.stringify(x);
+ return t.length>22?t.slice(0,22)+"…":t;}
+
+function vsdbHuman(v){
+ var out=[],ex=[];
+ out.push(v.cec?'<span class="badge b-ok">CEC</span>':'<span class="badge b-mut">CEC ✗</span>');
+ if(v.supports_4k!==undefined)out.push(v.supports_4k?'<span class="badge b-ok">4K</span>':'<span class="badge b-mut">4K ✗</span>');
+ if(v.supports_3d!==undefined)out.push(v.supports_3d?'<span class="badge b-ok">3D</span>':'<span class="badge b-mut">3D ✗</span>');
+ if(v.max_tmds_mhz)out.push('<span class="badge">TMDS '+esc(v.max_tmds_mhz)+' MHz</span>');
+ for(var k in v){if(["oui","hdmi_1_4","cec","supports_4k","supports_3d","max_tmds_mhz","latency_present"].indexOf(k)<0)
+  ex.push(fmtExtra(k,v[k]))}
+ return '<span class="tags" title="HDMI VSDB，OUI '+(v.oui||"00-0C-03")+'，HDMI 1.4 spec">'+out.concat(ex).join("")+'</span>';}
+
+function hfHuman(v){
+ var out=[],ex=[];
+ var sc=(v.scdc_present!==undefined?v.scdc_present:v.scdc);
+ if(sc!==undefined)out.push(sc?'<span class="badge b-ok">SCDC</span>':'<span class="badge b-mut">SCDC ✗</span>');
+ if(v.rr_capable!==undefined)out.push(v.rr_capable?'<span class="badge b-ok">RR</span>':'<span class="badge b-mut">RR ✗</span>');
+ if(v.max_tmds_char_rate_mhz)out.push('<span class="badge b-ok" title="HF-VSDB 的 Max_TMDS_Character_Rate（HDMI 2.0 字段，有 HF-VSDB 时以本值为准）">TMDS '+esc(v.max_tmds_char_rate_mhz)+' MHz</span>');
+ if(v.max_frl)out.push('<span class="badge b-ok" title="'+esc(v.max_frl_desc||('Max_FRL_Rate = '+v.max_frl))+'">FRL L'+esc(v.max_frl)+'</span>');
+ if(v.max_frl_rate)out.push('<span class="badge">FRL lane '+esc(v.max_frl_rate)+'</span>');
+ if(v.hf_version!==undefined)out.push('<span class="badge">HF v'+esc(v.hf_version)+'</span>');
+ for(var k in v){if(["oui","hdmi_forum","scdc_present","scdc","rr_capable","max_frl_rate","max_frl","max_frl_desc","hf_version","max_tmds_char_rate_mhz"].indexOf(k)<0)
+  ex.push(fmtExtra(k,v[k]))}
+ return '<span class="tags" title="HF-VSDB，OUI '+(v.oui||"C4-5D-D8")+'，HDMI 2.0 spec">'+out.concat(ex).join("")+'</span>';}
+
+/* 可读摘要（展示级解析） */
+function hex2bytes(hx){var b=[];for(var i=0;i<hx.length;i+=2)b.push(parseInt(hx.substr(i,2),16));return b}
+function desc18(d){ // monitor descriptor 18 字节
+ var f=d[0],t="";
+ for(var i=5;i<18;i++){if(d[i])t+=String.fromCharCode(d[i]);}
+ if(f===0xFC)return"产品名: "+t;if(f===0xFF)return"序列号: "+t;
+ if(f===0xFE)return"文本: "+t;
+ if(f===0x10){var vmin=d[5],vmax=d[6];return"刷新率范围: "+vmin+"-"+vmax+" Hz";}
+ return null;}
+/* 最大像素时钟：base block 全部 DTD + range limits(0x10) 的 max pixel clock + CTA 块内 DTD，取最大 */
+function maxPclk(){var B=hex2bytes(CUR.blocks.join(""));var best=0,src="";
+ for(var o=54;o<=108;o+=18){var d=B.slice(o,o+18);if(d.length<18)break;
+  if(d[0]===0&&d[1]===0){ if(d[3]===0xFD&&d[9]){var rp=d[9]*10;if(rp>best){best=rp;src="range limits"}} }
+  else{var p=(d[1]<<8)|d[0];if(p>0){var m=p/100;if(m>best){best=m;src="DTD"}}} }
+ var dd=(CUR.decoded&&CUR.decoded.displayid)||null;
+ if(dd&&dd.timings)for(var t2=0;t2<dd.timings.length;t2++){var pk=dd.timings[t2].pclk_mhz;if(pk&&pk>best){best=pk;src="DisplayID"}}
+ for(var n=1;n<CUR.blocks.length;n++){var s=n*128,E=B.slice(s,s+128);if(E[0]!==0x02)continue;
+  var off=E[2];if(!off||off<4||off>=127)continue;
+  for(var q=off;q+18<=127;q+=18){var p2=(E[q+1]<<8)|E[q];if(p2===0)continue;var m2=p2/100;if(m2>best){best=m2;src="DTD"}}}
+ return best?{mhz:Math.round(best*100)/100,src:src}:null;}
+function dtdStr(B,o){var p=(B[o+1]<<8)|B[o];var pclk=p/100; // MHz
+ if(pclk<=0)return null;
+ var ha=B[o+2]|((B[o+4]>>4)<<8), hb=B[o+3]|((B[o+4]&0xF)<<8);
+ var va=B[o+5]|((B[o+7]>>4)<<8), vb=B[o+6]|((B[o+7]&0xF)<<8);
+ if(ha<=0||va<=0)return null;
+ var rr=Math.round(pclk*1000000/((ha+hb)*(va+vb)));
+ return ha+"×"+va+" @ "+rr+" Hz（pclk "+pclk+" MHz）";}
+/* ---------- 粘贴 EDID 解析（展示级） ---------- */
+var CURSRC="";   // "lib" | "paste"
+function le16(b,o){return b[o]|(b[o+1]<<8)}
+function pnpId(hi,lo){ // 厂商 3 字母 5bit
+  var v=(hi<<8)|lo, s="";
+  for(var i=2;i>=0;i--){var c=(v>>(i*5))&0x1F;s+=String.fromCharCode(64+c)}
+  return s;
+}
+function lightDecode(B){
+  var d={},warn=[];
+  if(B.length<128||B[0]!==0x00||B[1]!==0xFF){warn.push("base block 头部不是 00 FF…");}
+  d.manufacturer=pnpId(B[8],B[9]);
+  var pc=le16(B,10); d.product_code="0x"+pc.toString(16).toUpperCase();
+  if(B[21]||B[22]) d.physical_size_cm=[B[21],B[22]];
+  // 描述符区
+  var rangeD=null, name=null, serial=null;
+  for(var o=54;o<=108;o+=18){
+    var dd=B.slice(o,o+18);
+    if(dd[0]===0&&dd[1]===0){
+      if(dd[3]===0xFC){var s="";for(var i=5;i<18;i++){if(dd[i]===0x0A)break;s+=String.fromCharCode(dd[i])}name=s.trim();}
+      else if(dd[3]===0xFF){var s2="";for(var j=5;j<18;j++){if(dd[j]===0x0A)break;s2+=String.fromCharCode(dd[j])}serial=s2.trim();}
+      else if(dd[3]===0xFD){rangeD=dd;}
+    }
+  }
+  if(name)d.product_name=name;
+  if(serial)d.serial_number=serial;
+  // preferred timing（首个非 descriptor 的 18 字节）
+  var pref=null;
+  for(var o2=54;o2<=108;o2+=18){
+    var p=B.slice(o2,o2+18);
+    if(p[0]||p[1]){
+      var pclk=((p[1]<<8)|p[0])/100;
+      var ha=p[2]|((p[4]>>4)<<8), hb=p[3]|((p[4]&0x0F)<<8);
+      var va=p[5]|((p[7]>>4)<<8), vb=p[6]|((p[7]&0x0F)<<8);
+      var hmax=ha+hb, vmax=va+vb;
+      if(pclk>0&&hmax>0&&vmax>0){
+        pref={h:ha,v:va,hz:Math.round(pclk*1e6/(hmax*vmax)*1000)/1000};
+        break;
+      }
+    }
+  }
+  if(pref)d.preferred_timing=pref;
+  // 扩展块
+  var maxRes=[0,0], vics=[], pclkMax=0, pclkSrc="", audioCh=0, spec=null, tmds=null, hfTmds=null, hfFrl=0, dc=[], did=null, nativeVic=null;
+  function bump(h,v){ if(h*v>maxRes[0]*maxRes[1]) maxRes=[h,v]; }
+  if(pref) bump(pref.h,pref.v);
+  for(var n=1;n*128<B.length+1;n++){
+    var E=B.slice(n*128,(n+1)*128); if(E.length<128)break;
+    if(E[0]===0x02){ // CTA-861
+      var dt=E[3];
+      var dtdOff=E[2]&0x7F;
+      var i4=4, end=dtdOff>4?dtdOff:127;
+      while(i4<end){
+        var len=E[i4]&0x1F, tag=E[i4]>>5;
+        if(len===0)break;
+        var body=E.slice(i4+1,i4+1+len);
+        if(tag===2){ // Video Data Block
+          for(var k=0;k<body.length;k++){
+            var v=body[k]&0x7F;
+            if(v>0&&vics.indexOf(v)<0)vics.push(v);
+            nativeVic=body[k]>>7?v:nativeVic;
+          }
+        } else if(tag===1){ // Audio Data Block：每 SAD 3 字节，首字节 bit2:0 = 声道数-1
+          for(var a=0;a+2<body.length;a+=3){
+            if((body[a]>>3)===1){var chs=(body[a]&0x07)+1;if(chs>audioCh)audioCh=chs;}
+          }
+        } else if(tag===3){ // VSDB
+          if(body.length>=7&&body[0]===0x03&&body[1]===0x0C&&body[2]===0x00){
+            spec="1.4";
+            if(body.length>=7)tmds=body[6]*5;
+            if(body.length>=6){var fl=body[5];
+              if(fl&0x10)dc.push("DC_30bit"); if(fl&0x20)dc.push("DC_36bit");
+              if(fl&0x40)dc.push("DC_48bit"); if(fl&0x08)dc.push("DC_Y444");}
+          } else if(body.length>=5&&body[0]===0xD8&&body[1]===0x5D&&body[2]===0xC4){
+            spec="2.0";
+            if(body.length>=5)hfTmds=body[4]*5;
+            if(body.length>=7){var frl=(body[6]>>4)&0x0F;if(frl>0){spec="2.1";hfFrl=frl;}}
+          }
+        }
+        i4+=len+1;
+      }
+      // DTD 区
+      if(dtdOff>4&&dtdOff<128){
+        for(var q=dtdOff;q+18<=127;q+=18){
+          var t=E.slice(q,q+18);
+          if(!t[0]&&!t[1])continue;
+          var pc2=((t[1]<<8)|t[0])/100;
+          var h2=t[2]|((t[4]>>4)<<8), hb2=t[3]|((t[4]&0x0F)<<8);
+          var v2=t[5]|((t[7]>>4)<<8), vb2=t[6]|((t[7]&0x0F)<<8);
+          if(pc2<=0)continue;
+          bump(h2,v2);
+          if(pc2>pclkMax){pclkMax=pc2;pclkSrc="DTD";}
+        }
+      }
+      // 深色 / 扩展块里的 HF-VSDB 可能出现在 Extended tag
+      for(var e=4;e<end;e++){
+        if(E[e]===0xE2||(E[e]===0xE5)){}
+      }
+    } else if(E[0]===0x70){ // DisplayID
+      did=parseDisplayID(E);
+    }
+  }
+  if(rangeD&&rangeD[9]){var rp=rangeD[9]*10;if(rp>pclkMax){pclkMax=rp;pclkSrc="range limits";}}
+  if(did&&did.timings){
+    did.timings.forEach(function(t){ bump(t.h,t.v); if(t.pclk_mhz>pclkMax){pclkMax=t.pclk_mhz;pclkSrc="DisplayID";} });
+  }
+  if(pclkMax)d.max_pixel_clock_mhz=Math.round(pclkMax*100)/100;
+  if(maxRes[0])d.max_resolution=maxRes;
+  if(vics.length)d.vic_list=vics;
+  if(audioCh)d.audio_max_channels=audioCh;
+  if(nativeVic!=null)d.native_vic=nativeVic;
+  if(spec)d.hdmi_spec=spec;
+  if(hfTmds!=null||hfFrl)d.hdmi_forum_vsdb={max_tmds_char_rate_mhz:hfTmds};
+  if(hfFrl)d.hdmi_forum_vsdb.max_frl=hfFrl;
+  if(tmds!=null)d.max_tmds_clock=tmds;
+  if(dc.length)d.deep_color=dc;
+  if(did)d.displayid=did;
+  d._warn=warn;
+  return d;
+}
+function parseDisplayID(E){
+  var ver=E[1], secs=E[2], out={version:(ver>>4)+"."+(ver&0x0F), timings:[]};
+  var p=E;
+  for(var s=0;s<secs;s++){
+    var tag=p[3], len=p[4];
+    if(tag===0x00&&len>=20){ // Detailed Timing 20B
+      var pc=((p[7]<<16)|(p[6]<<8)|p[5])/1000; // kHz
+      var h=(p[9]<<8)|p[8], v=(p[12]<<8)|p[11];
+      var htotal=((p[11]&0x7F)<<8)|p[10];
+      if(h>0&&v>0){
+        var hz=pc>0&&htotal>0?(pc*1000/(htotal*v)):0;
+        out.timings.push({h:h,v:v,hz:Math.round(hz*1000)/1000,pclk_mhz:Math.round(pc/1000*100)/100});
+      }
+    }
+    p=p.slice(5+len);
+    if(p.length<5)break;
+  }
+  if(!out.timings.length)return null;
+  return out;
+}
+function pasteSample(){
+ var src=(CUR&&CUR.blocks&&CUR.blocks.length)?CUR.blocks:(RECS.length?RECS[0].blocks:[]);
+ if(!src.length){$("pmsg").innerHTML='<span class="badge b-warn">库里没有可用记录</span>';return}
+ var hx=src.join("").toUpperCase(), by=[], lines=[];
+ for(var i=0;i<hx.length;i+=2)by.push(hx.substr(i,2));
+ for(var j2=0;j2<by.length;j2+=32)lines.push(by.slice(j2,j2+32).join(" "));
+ $("edidhex").value=lines.join(String.fromCharCode(10));
+ $("pmsg").innerHTML='<span class="hint">已填入样例（'+src.length+' 块 / '+(hx.length/2)+' 字节）</span>';
+}
+
+function warnBadge(list){
+ if(!list||!list.length)return "";
+ return ' <span class="badge b-warn">'+esc(list.join("；"))+'</span>';}
+
+function cleanHex(raw){
+ var lines=raw.split(/\r?\n/),out=[];
+ for(var i=0;i<lines.length;i++){
+  var L=lines[i];
+  L=L.replace(/^\s*[0-9a-fA-F]{4,8}:(?=\s|$)/,"");      // i2cdump 的 00: 行首
+  L=L.replace(/^\s*[0-9a-fA-F]{4,8}(?=\s{2,})/,"");      // 本页 hex 视图的 0000 偏移
+  out.push(L);
+ }
+ return out.join(" ").replace(/[^0-9a-fA-F]/g,"");
+}
+
+function parsePaste(){
+ var ps=$("pSave");if(ps)ps.style.display="none";
+ var raw=cleanHex($("edidhex").value||"");
+ var warns=[];
+ if(raw.length%2){
+  warns.push("末尾有 1 个孤立 hex 字符「"+raw.slice(-1)+"」已忽略（hex 字符数需为偶数）");
+  raw=raw.slice(0,-1);
+ }
+ var bytes=hex2bytes(raw);
+ CUR=null;resetTop();
+ if(bytes.length<128){
+  $("pmsg").innerHTML='<span class="badge b-bad">字节数不足 128（当前 '+bytes.length+'），不是完整的 EDID base block</span>'+warnBadge(warns);
+  return;}
+ var nb=Math.floor(bytes.length/128);
+ var blocks=[];
+ for(var i=0;i<nb;i++)blocks.push(bytes.slice(i*128,(i+1)*128).map(function(x){return ("0"+x.toString(16)).slice(-2)}).join(""));
+ var hdrOk=(bytes[0]===0x00&&bytes[1]===0xFF&&bytes[2]===0xFF&&bytes[3]===0xFF&&
+            bytes[4]===0xFF&&bytes[5]===0xFF&&bytes[6]===0xFF&&bytes[7]===0x00);
+ var ckOk=checksumsOk(blocks);
+ var bad=[];
+ for(var b2=0;b2<nb;b2++){var bb=hex2bytes(blocks[b2]),sm=0;
+  for(var q=0;q<128;q++)sm+=bb[q];
+  if((sm&0xFF)!==0)bad.push("block "+b2);}
+ if(!hdrOk||!ckOk){
+  var msg=[];
+  if(!hdrOk)msg.push("base block 头部不是 00 FF FF FF FF FF FF 00（数据可能错位或多粘了字节）");
+  if(!ckOk)msg.push((bad.length?bad.join("、"):"校验和"+"")+" 校验和不正确");
+  $("pmsg").innerHTML='<span class="badge b-bad">无法解析：'+esc(msg.join("；"))+'</span>'+warnBadge(warns);
+  return;}
+ if(bytes.length%128)
+  warns.push(bytes.length+" 字节不是 128 的整数倍，按 "+nb+" 块解析");
+ var d=lightDecode(bytes);
+ var rec={id:"(粘贴解析)",name:d.product_name||"(未命名)",brand:d.manufacturer||"—",model:"—",
+  interface:(d.hdmi_spec?"hdmi"+d.hdmi_spec:(d.displayid?"dp":"unknown")),
+  edid_version:(bytes[18]+"."+bytes[19]),block_count:nb,
+  blocks:blocks,decoded:d,checksum_ok:true,
+  source_file:"—",raw_file:"—",format:"pasted",notes:"粘贴解析"};
+ CUR=rec;CURSRC="paste";renderSum();
+ $("pmsg").innerHTML='<span class="badge b-ok">已解析 '+nb+' 块 / '+bytes.length+' 字节，校验和 OK</span>'+warnBadge(warns);
+ if(ps)ps.style.display="";
+ var sr=$("sumPanel").getBoundingClientRect();if(sr.top<0||sr.bottom>innerHeight)$("sumPanel").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function checksumsOk(blocks){
+  for(var i=0;i<blocks.length;i++){
+    var b=hex2bytes(blocks[i]),s=0;
+    for(var j=0;j<128;j++)s+=b[j];
+    if((s&0xFF)!==0)return false;
+  }
+  return true;
+}
+function clearPaste(){ $("edidhex").value=""; $("pmsg").innerHTML="";
+ resetTop();
+ var ps=$("pSave"); if(ps)ps.style.display="none"; }
+function pasteMetaHTML(){
+  var d=CUR.decoded||{},e=CUR.edid_version.split(".");
+  function kv(k,v){var e=(v==="—"||v===""||v==null);return '<dt'+(e?' class="empty"':'')+'>'+esc(k)+'</dt><dd'+(e?' class="empty"':'')+'>'+(e?"—":v)+'</dd>'}
+  return [kv("来源",'<span class="badge b-warn">粘贴解析</span>'),
+   kv("manufacturer",esc(d.manufacturer||"—")),
+   kv("product_code",esc(d.product_code||"—")),
+   kv("product_name",esc(d.product_name||"—")),
+   kv("serial_number",esc(d.serial_number||"—")),
+   kv("EDID 版本",esc(CUR.edid_version)+"（"+(parseInt(e[0],10)>1?"EDID 1.4":"EDID 1.3 及更早")+"）"),
+   kv("blocks",CUR.block_count+" 块（"+CUR.block_count*128+" 字节）"),
+   kv("checksum",'<span class="badge b-'+(CUR.checksum_ok?"ok":"bad")+'">'+(CUR.checksum_ok?"每块校验和 OK":"存在校验和错误")+"</span>"),
+   kv("interface",'<span class="badge b-'+esc(CUR.interface)+'">'+esc(CUR.interface)+"</span>"),
+   kv("hdmi_spec",d.hdmi_spec?("HDMI "+esc(d.hdmi_spec)):"—"),
+   kv("max_tmds_clock",d.max_tmds_clock!=null?d.max_tmds_clock+" MHz":"—")].join("");}
+
+function copySum(){
+ var NL=String.fromCharCode(10), parts=[];
+ var tt=$("sumTitle").cloneNode(true);
+ var junk=tt.querySelectorAll(".hint,button");
+ for(var q=0;q<junk.length;q++)junk[q].parentNode.removeChild(junk[q]);
+ parts.push(tt.innerText.replace(/[ 	]+/g," ").replace(/\s+$/,""));
+ var dl=$("metaBody").querySelector("dl.kv");
+ if(dl){var dts=dl.querySelectorAll("dt"),dds=dl.querySelectorAll("dd");
+  parts.push("");parts.push("【元数据】");
+  for(var i2=0;i2<dts.length&&i2<dds.length;i2++)parts.push(dts[i2].innerText+" : "+dds[i2].innerText.replace(/\s+/g," "));}
+ var ul=$("sumBody").querySelector(".detail");
+ if(ul){var lis=ul.querySelectorAll("li");
+  parts.push("");parts.push("【可读摘要】");
+  for(var i3=0;i3<lis.length;i3++)parts.push("- "+lis[i3].innerText.replace(/\s+/g," ").replace(/^- /,""));}
+ parts.push("");parts.push("（blocks hex 见页面，此处不复制）");
+ var txt=parts.join(NL);
+ function mark(ok){var b=$("copyBtn");if(!b)return;b.textContent=ok?"已复制":"复制失败";
+  setTimeout(function(){b.textContent="复制摘要"},1400)}
+ function fb(){var ta=document.createElement("textarea");ta.value=txt;
+  ta.style.cssText="position:fixed;left:-9999px;top:0";document.body.appendChild(ta);ta.select();
+  var ok=false;try{ok=document.execCommand("copy")}catch(e){}
+  document.body.removeChild(ta);mark(ok)}
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){mark(true)},fb);
+ else fb();}
+
+/* 共用摘要区渲染 */
+function resetTop(){
+  $("sumTitle").innerHTML='③ 可读摘要 <span class="hint">— 点下方表格任一记录查看</span>';
+  $("sumBody").innerHTML="";
+  $("metaBody").innerHTML='<span class="hint">点下方表格任一记录查看</span>';
+}
+
+function renderSum(){
+  if(!CUR){resetTop();return}
+  var lib=CURSRC!=="paste";
+  $("sumTitle").innerHTML=(lib?"③ 可读摘要 · 库内记录 ":"③ 可读摘要 · 粘贴解析 ")+'<span class="mono">'+esc(CUR.id==="(粘贴解析)"?(CUR.decoded&&CUR.decoded.product_name||""):CUR.id)+'</span>'
+    +' <span class="hint">'+(lib?"点下方表格任意行切换":"未写入数据库")+'</span>'
+    +'<button id="copyBtn" onclick="copySum()" title="把标题、元数据与可读摘要复制为纯文本">复制摘要</button>'
+    ;
+  $("sumBody").innerHTML=capSummaryHTML();
+  $("metaBody").innerHTML='<dl class="kv hideempty">'+(lib?libMetaHTML():pasteMetaHTML())+'</dl>'
+    +'<h4 style="margin:12px 0 4px">blocks hex（'+CUR.block_count+' 块）</h4>'+blocksHexHTML()
+    ;
+}
+
+function capSummaryHTML(){if(!CUR)return"<div class='hint'>无记录</div>";var out=[],hx=CUR.blocks.join("");
+ var B=hex2bytes(hx);
+ // preferred timing：优先用记录里已解码的 timing 字段，缺失时自算兜底
+ var best=(CUR.decoded&&CUR.decoded.preferred_timing)?(CUR.decoded.preferred_timing.h+"×"+CUR.decoded.preferred_timing.v+" @ "+Math.round(CUR.decoded.preferred_timing.hz*10)/10+" Hz"):null;
+ if(!best){for(var o=54;o<=108;o+=18){var s=dtdStr(B,o);if(s){best=s;break;}}}
+ if(best)out.push("<b>preferred timing（最佳分辨率）</b>: "+best);
+ var mx=CUR.decoded&&CUR.decoded.max_resolution;
+ if(mx)out.push("<b>最大支持分辨率</b>: "+mx[0]+"×"+mx[1]);
+ var vic=CUR.decoded&&CUR.decoded.vic_list;
+ if(vic&&vic.length)out.push("<b>CTA VIC 列表</b>: "+esc(vic.join(", ")));
+ var amc=CUR.decoded&&CUR.decoded.audio_max_channels;
+ if(amc)out.push("<b>音频最大声道</b>: "+amc);
+ var dk=CUR.decoded||{};
+ var di=dk.displayid;
+ if(di&&di.timings&&di.timings.length){
+  var ts=di.timings.slice().sort(function(a,b){return b.hz-a.hz});
+  var maxhz=ts[0].hz;
+  out.push("<b>DisplayID "+esc(di.version||"")+" 高刷模式</b>: "+esc(ts.map(function(t){return t.h+"×"+t.v+"@"+(Math.round(t.hz*10)/10)+(t.pclk_mhz?" ("+Math.round(t.pclk_mhz)+"MHz)":"")}).join("、")));
+  out.push("<b>最高刷新率</b>: "+(Math.round(maxhz*10)/10)+" Hz");
+ }
+ var mp=maxPclk();
+ if(mp)out.push("<b>最大像素时钟</b>: "+mp.mhz+" MHz（"+mp.src+"）");
+ if(dk.native_vic!=null)out.push("<b>原生视频格式（VIC）</b>: "+dk.native_vic);
+ if(dk.deep_color&&dk.deep_color.length)out.push("<b>深色能力</b>: "+esc(dk.deep_color.join("、")));
+ var lim="";for(var o=108;o<=126;o+=18){var d=desc18(B.slice(o,o+18));if(d)lim+="<li>"+esc(d)+"</li>";}
+ if(lim)out.push("<b>描述符</b>: <ul style='margin:2px 0'>"+lim+"</ul>");
+ var edid=CUR.edid_version;
+ out.push("<b>EDID 版本</b>: "+edid+"，"+CUR.block_count+" blocks");
+ // 扩展块逐个扫
+ for(var n=1;n<CUR.blocks.length;n++){
+  var s=n*128,E=B.slice(s,s+128),tag=E[0];
+  if(tag===0x02){ // CTA-861
+   var caps=[];var dt=E[3];
+   if(dt&0x40)caps.push("basic audio 声明");
+   if(dt&0x20)caps.push("YCbCr 4:2:2");
+   if(dt&0x10)caps.push("YCbCr 4:4:4");
+   var dtdOff=E[2]&0x7F; // DTD 起始偏移
+ var i4=4, end=dtdOff>4?dtdOff:127;
+ var nAud=0,nVid=0,nVsd=0,nExt=0;
+ while(i4<end){var len=E[i4]&0x1F,tag2=E[i4]>>5;
+  if(len===0)break;
+  if(tag2===1)nAud+=len/3;else if(tag2===2)nVid+=len;else if(tag2===3)nVsd++;else nExt++;
+  i4+=len+1;}
+ if(nAud)caps.push("audio 格式 ×"+nAud);
+ if(nVid)caps.push("video 格式 ×"+nVid);
+ if(nVsd+nExt)caps.push("厂商/扩展块 ×"+(nVsd+nExt));
+   if(dtdOff>4&&dtdOff<128)caps.push("DTD ×"+Math.floor((127-dtdOff)/18));
+   // VSDB OUI 扫描
+   var raw=E.join(",");
+   var vsdb=[],hf=[];
+   for(var k=0;k<128-5;k++){
+    if(E[k]===0x00&&E[k+1]===0x0C&&E[k+2]===0x03)vsdb.push(k);
+    if(E[k]===0xC4&&E[k+1]===0x5D&&E[k+2]===0xD8)hf.push(k);}
+   var vsInfo="";
+   if(vsdb.length){var addr=vsdb[0]+3;var mtds=E[addr+1]?E[addr+1]*5:"";
+    vsInfo="HDMI VSDB（00-0C-03，HDMI 1.4 spec 声明）存在"+(mtds?"，max TMDS "+mtds+" MHz":"");}
+   var hfInfo=hf.length?"HF-VSDB（C4-5D-D8，HDMI 2.0 spec 声明）存在":"";
+   var hdmiSpec=(CUR.interface==="hdmi2.1")?"2.1":(CUR.decoded?CUR.decoded.hdmi_spec:null);
+   var specTxt=hdmiSpec?("HDMI "+hdmiSpec):({dp:"DisplayPort"}[CUR.interface]||CUR.interface);
+   var tmdsRate=null;
+   if(hdmiSpec){var hf=(CUR.decoded||{}).hdmi_forum_vsdb;if(hf&&hf.max_tmds_char_rate_mhz)tmdsRate=hf.max_tmds_char_rate_mhz;
+     else if((CUR.decoded||{}).max_tmds_clock)tmdsRate=(CUR.decoded||{}).max_tmds_clock;}
+   out.push("<b>接口规格</b>: "+esc(specTxt)+(tmdsRate?"&nbsp;&nbsp;max TMDS "+tmdsRate+" MHz":""));
+   if(vsInfo)out.push(esc(vsInfo));if(hfInfo)out.push(esc(hfInfo));
+   if(caps.length)out.push("<b>CTA-861 能力</b>: "+esc(caps.join("、")));
+ } else if(n>0){
+     var EXT_NAME={0x02:"CTA-861",0x0A:"DI-EXT",0x10:"VTDB",0x20:"视频时序扩展",0x40:"DI-EXT",
+       0x50:"LS-EXT",0x60:"DPVL",0x70:"DisplayID",0xA7:"厂商自定义",0xAF:"厂商自定义",0xF0:"Display Device Data"};
+     var en=EXT_NAME[tag];
+     if(tag===0x70){
+       var dv=(CUR.decoded||{}).displayid;
+       out.push("<b>扩展块 "+n+"</b>: DisplayID"+(dv&&dv.version?" "+dv.version:"")+" 扩展块"+(dv&&dv.timings&&dv.timings.length?"（"+dv.timings.length+" 个时序）":""));
+     } else if(en) out.push("<b>扩展块 "+n+"</b>: "+en+" 扩展块");
+     else out.push("<b>扩展块 "+n+"</b>: tag 0x"+("0"+tag.toString(16)).slice(-2)+"（未识别）");
+    }}
+ // 物理与来源补充
+ var d=CUR.decoded||{};
+ if(d.physical_size_cm)out.push("<b>物理尺寸</b>: "+esc(d.physical_size_cm.join(" × "))+" cm（对角约 "+(Math.round(Math.sqrt(d.physical_size_cm[0]*d.physical_size_cm[0]+d.physical_size_cm[1]*d.physical_size_cm[1])/2.54*10)/10)+"″）");
+ out.push("<div class='hint'>摘要为展示级解析（本页即时计算），仅供参考。</div>");
+ return "<div class='detail' style='background:#f6faff'><ul style='margin:4px 0 2px;padding-left:18px'>"
+  +out.map(function(x){return "<li>"+x+"</li>"}).join("")+"</ul></div>";}
+
+/* 编辑 */
+function showEdit(){if(!CUR)return;var e=$("editbox");
+ function fld(id,label,val){return '<div class="fld"><label>'+label+'</label><input id="'+id+'" value="'+esc(val==null?"":val)+'"></div>'}
+ e.innerHTML="<h3>编辑 "+esc(CUR.id)+"</h3>"
+  +fld("eName","name",CUR.name)+fld("eIf","interface",CUR.interface)
+  +fld("eOrig","source_origin",CUR.source_origin)+fld("eCap","captured_at",CUR.captured_at)
+  +'<div class="fld"><label>notes</label><textarea id="eNotes">'+esc(CUR.notes||"")+"</textarea></div>"
+  +'<div class="hint">blocks / decoded 为解码派生字段，只读。</div>'
+  +'<div style="margin:8px 0"><button class="pri" onclick="applyEdit()">应用到本地视图</button>'
+  +'<button onclick="$(&quot;editbox&quot;).style.display=&quot;none&quot;">取消</button><span id="eMsg"></span></div>';
+ showTab("editbox");}
+function applyEdit(){CUR.name=$("eName").value;CUR.interface=$("eIf").value;
+ CUR.source_origin=$("eOrig").value||null;
+ CUR.captured_at=$("eCap").value||null;CUR.notes=$("eNotes").value;
+ $("eMsg").innerHTML='<span class="okmsg">已应用到当前视图</span>';
+ render();showDetail(CUR.id);}
+
+/* 导出 */
+function dl(name,text){var a=document.createElement("a");
+ a.href=URL.createObjectURL(new Blob([text],{type:"application/octet-stream"}));
+ a.download=name;a.click();}
+function exportAll(){dl("records.jsonl",RECS.map(function(r){return JSON.stringify(r)}).join("\n")+"\n")}
+
+/* 新 EDID 校验 */
+function hexToks(t){var s=String(t).replace(/EDID\[0x[0-9a-fA-F]+\]/g," ").replace(/0[xX]/g," ");
+ return s.match(/[0-9a-fA-F]{2}/g)||[];}
+function checkBlocks(bytes){var errs=[],n=Math.floor(bytes.length/128);
+ if(bytes.length%128)errs.push("长度 "+bytes.length+" 不是 128 的整数倍");
+ if(bytes[0]!==0||bytes[1]!==0xFF)errs.push("签名头不是 00 FF FF FF FF FF FF 00");
+ for(var b=0;b<n;b++){var s=0;for(var i=0;i<128;i++)s=(s+bytes[b*128+i])&0xFF;
+  if(s)errs.push("block "+b+" checksum BAD (sum="+s+")");}
+ return{n:n,errs:errs};}
+function sha256hex(s){function rotr(x,n){return(x>>>n)|(x<<(32-n))}
+ var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+ var H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+ var bytes=[];for(var i=0;i<s.length;i++){var c=s.charCodeAt(i);
+  if(c<128)bytes.push(c);else if(c<2048){bytes.push(192|(c>>6),128|(c&63))}else{bytes.push(224|(c>>12),128|((c>>6)&63),128|(c&63))}}
+ var bl=bytes.length*8;bytes.push(128);
+ while(bytes.length%64!==56)bytes.push(0);
+ var hi=Math.floor(bl/4294967296),lo=bl>>>0;
+ bytes.push((hi>>>24)&255,(hi>>>16)&255,(hi>>>8)&255,hi&255,(lo>>>24)&255,(lo>>>16)&255,(lo>>>8)&255,lo&255);
+ var w=new Array(64);
+ for(var i2=0;i2<bytes.length;i2+=64){
+  for(var t=0;t<16;t++)w[t]=(bytes[i2+t*4]<<24)|(bytes[i2+t*4+1]<<16)|(bytes[i2+t*4+2]<<8)|bytes[i2+t*4+3];
+  for(var t2=16;t2<64;t2++){var s0=rotr(w[t2-15],7)^rotr(w[t2-15],18)^(w[t2-15]>>>3);
+   var s1=rotr(w[t2-2],17)^rotr(w[t2-2],19)^(w[t2-2]>>>10);
+   w[t2]=(w[t2-16]+s0+w[t2-7]+s1)|0;}
+  var a=H[0],b2=H[1],c2=H[2],d=H[3],e=H[4],f2=H[5],g=H[6],h=H[7];
+  for(var t3=0;t3<64;t3++){var S1=rotr(e,6)^rotr(e,11)^rotr(e,25);
+   var ch=(e&f2)^(~e&g);var temp1=(h+S1+ch+K[t3]+w[t3])|0;
+   var S0=rotr(a,2)^rotr(a,13)^rotr(a,22);var maj=(a&b2)^(a&c2)^(b2&c2);
+   var temp2=(S0+maj)|0;h=g;g=f2;f2=e;e=(d+temp1)|0;d=c2;c2=b2;b2=a;a=(temp1+temp2)|0;}
+  H[0]=(H[0]+a)|0;H[1]=(H[1]+b2)|0;H[2]=(H[2]+c2)|0;H[3]=(H[3]+d)|0;
+  H[4]=(H[4]+e)|0;H[5]=(H[5]+f2)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0;}
+ var out="";for(var i3=0;i3<8;i3++)out+=("00000000"+((H[i3]>>>0).toString(16))).slice(-8);
+ return out;}
+</script>
+</body></html>

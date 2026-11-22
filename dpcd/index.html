@@ -1,0 +1,358 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DPCD 速查与解析</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--bd:#d8dee8;--tx:#1c2733;--ac:#1a63c9;--ok:#157a3f;--warn:#b35c00;--bad:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.55 -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:#16324f;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20}
+header .t{font-size:15px;font-weight:600}
+header a{color:#a8c8e8;font-size:12px;text-decoration:none;margin-left:14px}
+header a:hover{color:#fff}
+main{max-width:1280px;margin:0 auto;padding:16px 20px 60px}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:9px;padding:14px 16px;margin-bottom:14px}
+.panel h2{margin:0 0 10px;font-size:14px;color:#16324f;font-weight:600}
+textarea{width:100%;height:120px;font:12px/1.5 ui-monospace,Consolas,monospace;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;resize:vertical;box-sizing:border-box}
+button{padding:5px 13px;border:1px solid var(--ac);background:var(--ac);color:#fff;border-radius:5px;cursor:pointer;font-size:13px}
+button.ghost{background:#fff;color:var(--ac)}
+button:hover{opacity:.9}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.hint{color:#6b7a8c;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{background:#eef1f5;text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);position:sticky;top:0;white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid #eef1f5;vertical-align:top}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.badge{display:inline-block;padding:1px 7px;border-radius:4px;font-size:11.5px;font-weight:600}
+.b-ok{background:#e3f6ea;color:var(--ok)}.b-no{background:#eee;color:#777}.b-warn{background:#fdeee0;color:var(--warn)}.b-bad{background:#fdeaea;color:var(--bad)}
+.kv{display:grid;grid-template-columns:238px 1fr;gap:5px 14px;font-size:13px}
+.kv .k{color:#5b6b7c;line-height:1.45;font-size:12.5px}
+.cap{border-left:3px solid var(--ac);padding:8px 12px;background:#f7fafd;border-radius:0 6px 6px 0;margin-bottom:8px}
+.cap b{color:#16324f}
+pre.hex{background:#101820;color:#9fe19f;padding:10px;border-radius:6px;overflow:auto;max-height:300px;font:12px/1.5 ui-monospace,monospace}
+.bit{display:inline-block;background:#eef2f7;border-radius:3px;padding:0 5px;margin:1px 3px 1px 0;font-size:11.5px;font-family:ui-monospace,monospace}
+.fldrow:hover{background:#f6f9fd;cursor:pointer}
+.fldrow.noexp:hover{background:transparent;cursor:default}
+.sec{color:#16324f;font-weight:600;background:#f0f4f9}
+#srch{width:280px;padding:5px 9px;border:1px solid var(--bd);border-radius:5px;font-size:13px}
+details{margin-top:4px}
+summary{cursor:pointer;color:var(--ac);font-size:12.5px}
+.msg{font-size:12.5px;margin-top:6px}
+.cn{color:#3d5a75;font-size:12.5px}
+details .en{color:#5b6b7c;font-size:12px;font-family:ui-monospace,monospace}
+.sec2{cursor:pointer;user-select:none}
+.sec2 .arw{display:inline-block;width:13px;color:#6b7a8c;font-family:monospace}
+mark{background:#ffe58a;padding:0 1px;border-radius:2px;color:inherit}
+a.jump{color:#2563c8;cursor:pointer;text-decoration:none;border-bottom:1px dotted #2563c8;font-family:ui-monospace,monospace;font-size:11.5px;margin-left:5px}
+a.jump:hover{background:#eef4ff}
+.k a.jump{margin-left:0;margin-right:6px;font-weight:400;font-size:11px}
+#fields thead th{position:sticky;top:0;background:#f3f5f8;z-index:2;box-shadow:inset 0 -1px 0 var(--bd)}
+#totop{position:fixed;right:24px;bottom:24px;width:38px;height:38px;border-radius:50%;border:1px solid var(--bd);background:#fff;color:#445;cursor:pointer;display:none;box-shadow:0 2px 10px rgba(0,0,0,.12);font-size:16px;line-height:1}
+#totop:hover{background:#f0f4f8}
+tr.flash td{animation:fl 1.6s ease-out}
+@keyframes fl{0%{background:#fff3b0}100%{background:transparent}}
+
+/* ---- 统一 header（三页共用） ---- */
+header{background:#16324f;color:#fff;padding:12px 22px;display:flex;align-items:baseline;gap:14px;position:sticky;top:0;z-index:20}
+header h1{margin:0;font-size:16px;font-weight:600;color:#fff;letter-spacing:0}
+header .sub{font-size:12.5px;opacity:.72;font-weight:400}
+header .nav{margin-left:auto;display:flex;gap:16px;align-items:baseline}
+header .nav a{color:#fff;opacity:.82;text-decoration:none;font-size:13px}
+header .nav a:hover{opacity:1;text-decoration:underline}
+header .nav a.cur{opacity:.5;cursor:default}
+header .nav a.cur:hover{text-decoration:none}
+</style></head><body>
+<header><h1>DPCD 速查与解析</h1><span class="sub">DisplayPort 2.1a 寄存器与能力解析</span><span class="nav"><a href="../edid/">EDID 数据库</a><a href="../dpcd/" class="cur">DPCD 速查</a><a href="../timing/">时序计算器</a><a href="../">首页</a></span></header>
+<main>
+
+<div class="panel">
+  <h2>① 粘贴 sink 的 DPCD dump 解析</h2>
+  <textarea id="dump" placeholder="支持三种格式：
+  ① i2cdump / sysfs 十六进制表：  00: 14 0a 84 01 00 00 00 00 ...
+  ② 带地址段：                    00000: 14 0a 84 01 ...
+  ③ 连续 hex 串：                  140a840100000000...
+
+（RF 寄存器从 00000h 起连续排列时最省事；省略行首地址时按第 1 行起始地址累计）"></textarea>
+  <div class="row">
+    <button onclick="doParse()">解析</button>
+    <button class="ghost" onclick="loadSample()">填入样例</button>
+    <button class="ghost" onclick="copyPrompt()">复制 AI 解读提示词</button>
+    <button class="ghost" onclick="document.getElementById('dump').value='';document.getElementById('result').innerHTML='';">清空</button>
+    <span class="hint" id="pmsg"></span>
+  </div>
+  <div id="result" style="margin-top:12px"></div>
+</div>
+
+<div class="panel" id="panelFields">
+  <h2>② 寄存器速查（DP 2.1a，<span id="tot">-</span> 项）</h2>
+  <div class="row" style="margin-top:0">
+    <input id="srch" placeholder="搜索寄存器名 / 地址，如 MSTM、00200" oninput="renderFields()">
+    <span class="hint" id="hit">点击行展开 spec 位定义与说明</span>
+  </div>
+  <div style="max-height:560px;overflow:auto;margin-top:9px" id="fields"></div>
+</div>
+
+<button id="totop" onclick="window.scrollTo(0,0)" title="回到顶部">↑</button>
+</main>
+<script src="fields.js"></script>
+<script>
+var BY={};            // addr(int) -> byte
+var FMTS=3;
+
+/* ---------- dump 解析 ---------- */
+function hexBytes(s){var m=s.match(/[0-9a-fA-F]{2}/g);return m?m.map(function(x){return parseInt(x,16)}):[]}
+function parseDump(txt){
+  BY={};
+  var lines=txt.split(/\r?\n/), startAddr=0, examined=0, ok=0;
+  for(var i=0;i<lines.length;i++){
+    var L=lines[i].trim();
+    if(!L) continue;
+    // 格式②/①：地址开头（带或不带 h/:）
+    var m=L.match(/^(?:0x)?([0-9a-fA-F]{2,5})h?\s*[:\-]\s*(.*)$/);
+    if(m){
+      var addr=parseInt(m[1],16); var bs=hexBytes(m[2]);
+      if(bs.length){ for(var j=0;j<bs.length;j++) BY[addr+j]=bs[j]; startAddr=addr+bs.length; examined++; ok++; }
+      continue;
+    }
+    // 纯字节行（无地址）：接着上一行继续累加
+    if(/^[0-9a-fA-F]{2}(\s+[0-9a-fA-F]{2})*$/.test(L)){
+      var bs2=hexBytes(L);
+      for(var k=0;k<bs2.length;k++) BY[startAddr+k]=bs2[k];
+      startAddr+=bs2.length; examined++; ok++;
+    }
+  }
+  return ok;
+}
+function g(a){ return BY[a]; }
+function bl(a,b){ return (g(a)&(1<<b))?1:0; }
+
+var RATE={0x06:"1.62 Gbps",0x0A:"2.70 Gbps",0x14:"5.40 Gbps",0x1E:"8.10 Gbps",0x01:"2.16 Gbps",0x04:"2.43 Gbps",0x08:"3.24 Gbps",0x19:"6.75 Gbps"};
+var REV={0x10:"DPCD r1.0",0x11:"DPCD r1.1",0x12:"DPCD r1.2",0x13:"DPCD r1.3",0x14:"DPCD r1.4"};
+
+function yn(v,on,off){ return v?('<span class="badge b-ok">'+on+'</span>'):('<span class="badge b-no">'+off+'</span>') }
+
+function doParse(){
+  var txt=document.getElementById("dump").value;
+  var n=parseDump(txt);
+  var out=document.getElementById("result");
+  if(!n){ out.innerHTML='<span class="msg b-bad">没解析到十六进制字节，请检查格式。</span>'; return; }
+  var minA=Math.min.apply(null,Object.keys(BY).map(Number)), maxA=Math.max.apply(null,Object.keys(BY).map(Number));
+  document.getElementById("pmsg").textContent="已解析 "+n+" 行 / "+Object.keys(BY).length+" 字节，地址范围 0x"+minA.toString(16)+" - 0x"+maxA.toString(16);
+
+  var rev=g(0x00), mr=g(0x01), lc=g(0x02);
+  var kv=[];
+  function add(k,v,a){
+    if(v===null||v===undefined||v==="") return;
+    var jmp=a?('<a class="jump" data-a="'+a+'">'+a+'h</a>'):'';
+    kv.push('<div class="k">'+jmp+k+'</div><div>'+v+'</div>');
+  }
+  if(rev!=null) add("DPCD_REV", '0x'+rev.toString(16)+' → '+(REV[rev]||"未定义"), "00000");
+  if(mr!=null)  add("最大链路速率", '0x'+mr.toString(16)+(RATE[mr]?(' → '+RATE[mr]+'/lane'):''), "00001");
+  if(lc!=null){
+    add("lane 数", (lc&0x1F)+" lane", "00002");
+    add("ENHANCED_FRAME", yn(bl(0x02,7),"支持","不支持"), "00002");
+    add("POST_LT_ADJ_REQ", yn(bl(0x02,5),"支持","不支持"), "00002");
+  }
+  if(g(0x03)!=null){
+    add("SSC 扩频", yn(bl(0x03,0),"支持（MAX_DOWNSPREAD）","不支持"), "00003");
+    add("TPS4 训练模式", yn(bl(0x03,7),"支持","不支持"), "00003");
+  }
+  if(g(0x06)!=null) add("主链路编码", (bl(0x06,0)?'<span class="badge b-ok">8b/10b</span> ':'')+(bl(0x06,1)?'<span class="badge b-ok">128b/132b</span>':'<span class="badge b-no">无 128b/132b</span>'), "00006");
+  if(g(0x07)!=null){
+    add("下游端口数（DFP）", (g(0x07)&0x0F), "00007");
+    add("MSA 时间参数忽略", yn(bl(0x07,6),"是","否"), "00007");
+  }
+  if(g(0x21)!=null){
+    add("MST", yn(bl(0x21,0),"支持","不支持"), "00021");
+    add("CEC 隧道", yn(bl(0x21,5),"支持","不支持"), "00021");
+  }
+  // 128b/132b_SUPPORTED_LINK_RATES @0x02215：1 字节位掩码（对齐 Linux drm_dp_helper.h：UHBR10=BIT(0)、UHBR20=BIT(1)、UHBR13_5=BIT(2)）
+  if(g(0x2215)!=null){
+    var u=g(0x2215), uhbr=[];
+    if(u&0x01) uhbr.push("UHBR10 (10 Gbps/lane)");
+    if(u&0x02) uhbr.push("UHBR20 (20 Gbps/lane)");
+    if(u&0x04) uhbr.push("UHBR13.5 (13.5 Gbps/lane)");
+    add("128b/132b 支持速率（UHBR）", uhbr.length?uhbr.join("、"):'<span class="badge b-no">未报告任何 UHBR 速率</span>', "02215");
+  }
+  if(g(0x22)!=null) add("音频端点数量", g(0x22), "00022");
+  if(g(0x60)!=null) add("DSC 解码", yn(bl(0x60,0),"支持","不支持"), "00060");
+  if(g(0x61)!=null) add("DSC 算法版本", "0x"+g(0x61).toString(16), "00061");
+  if(g(0x63)!=null) add("DSC RC buffer size", "0x"+g(0x63).toString(16), "00063");
+  if(g(0x90)!=null) add("FEC", yn(bl(0x90,0),"支持","不支持"), "00090");
+  if(g(0x91)!=null) add("FEC_CAPABILITY_1", "0x"+g(0x91).toString(16), "00091");
+  if(g(0xC0)!=null) add("HDCP 1.3", yn(bl(0xC0,0),"支持","不支持"), "000C0");
+  if(g(0x200)!=null) add("SINK_COUNT", (g(0x200)&0x3F), "00200");
+  if(g(0x202)!=null||g(0x203)!=null){
+    var lk=[];
+    for(var L2=0;L2<4;L2++){
+      var reg=L2<2?0x202:0x203, sh=(L2%2)*4;
+      var cr=(g(reg)>>sh)&1, eq=(g(reg)>>(sh+1))&1, sl=(g(reg)>>(sh+2))&1;
+      lk.push("Lane"+L2+" "+(cr&&eq&&sl?'<span class="badge b-ok">CR/EQ/Lock ✓</span>':'<span class="badge b-warn">未就绪</span>'));
+    }
+    add("链路训练状态", lk.join("　"), "00202");
+  }
+  if(g(0x204)!=null) add("INTERLANE_ALIGN_DONE", yn(bl(0x204,0),"完成","未完成"), "00204");
+  if(g(0x205)!=null) add("接收端口同步", "port0 "+(bl(0x205,0)?'<span class="badge b-ok">in sync</span>':'<span class="badge b-warn">out of sync</span>')+"　port1 "+(bl(0x205,1)?'<span class="badge b-ok">in sync</span>':'<span class="badge b-warn">out of sync</span>'), "00205");
+
+  var html='';
+  // 顶部两个大卡：版本/链路带宽
+  var top=[];
+  if(rev!=null) top.push('<div class="cap"><b>DPCD 版本</b>：'+(REV[rev]||("0x"+rev.toString(16)+"（未定义值）"))+'</div>');
+  if(mr!=null||lc!=null){
+    var parts=[];
+    if(mr!=null) parts.push("最大速率 "+((RATE[mr]||("0x"+mr.toString(16)))+"/lane"));
+    var lanes=lc!=null?(lc&0x1F):null;
+    if(lanes) parts.push(lanes+" lane");
+    if(mr!=null&&RATE[mr]&&lanes){var gp=parseFloat(RATE[mr]);parts.push("带宽 "+(gp*lanes).toFixed(2)+" Gbps（有效 "+(gp*lanes*0.8).toFixed(2)+" Gbps）");}
+    if(parts.length) top.push('<div class="cap"><b>链路能力</b>：'+parts.join("　·　")+'</div>');
+  }
+  html+=top.join("");
+  html+='<div class="kv" style="margin-top:8px">'+kv.join("")+'</div>';
+  // 未在摘要中覆盖的已解析字节（原始表）
+  html+='<details style="margin-top:12px"><summary>查看已解析原始字节（'+Object.keys(BY).length+' 字节）</summary><pre class="hex">'+dumpHex()+'</pre></details>';
+  out.innerHTML=html;
+}
+function dumpHex(){
+  var keys=Object.keys(BY).map(Number).sort(function(a,b){return a-b});
+  if(!keys.length)return"";
+  var lines=[],cur=null,row=[];
+  for(var i=0;i<keys.length;i++){
+    var a=keys[i];
+    if(cur===null||a!==cur+row.length){ if(row.length){lines.push(fmt(cur,row));} cur=a; row=[]; }
+    row.push(BY[a]);
+    if(row.length===16){ lines.push(fmt(cur,row)); row=[]; cur=null; }
+  }
+  if(row.length)lines.push(fmt(cur,row));
+  return lines.join("\n");
+}
+function fmt(addr,row){
+  var hex=row.map(function(b){return ("0"+b.toString(16)).slice(-2)}).join(" ");
+  var asc=row.map(function(b){return (b>=32&&b<127)?String.fromCharCode(b):"."}).join("");
+  return ("00000"+addr.toString(16).toUpperCase()).slice(-5)+"h  "+hex+(new Array(48-hex.length).join(" "))+"  "+asc;
+}
+function loadSample(){
+  document.getElementById("dump").value=
+"00000: 14 14 84 01 00 00 01 00 00 00 00 00 00 00 00 00\n"+
+"00010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n"+
+"00020: 00 01 02 00 00 00 00 00 00 00 00 00 00 00 00 00\n"+
+"00060: 01 04 00 40 03 04 01 00 00 00 00 00 00 00 00 00\n"+
+"00090: 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00\n"+
+"00200: 01 00 77 77 00 03 00 00 00 00 00 00 00 00 00 00";
+  document.getElementById("result").innerHTML='<span class="msg hint">已填入样例（DPCD r1.4 / 5.4 Gbps × 4 lane / DSC / FEC / MST 支持 / 链路训练完成），点「解析」查看。</span>';
+}
+function copyPrompt(){
+  var txt=document.getElementById("dump").value.trim();
+  if(!txt){ document.getElementById("pmsg").textContent="请先粘贴 dump"; return; }
+  var p="你是 DisplayPort 协议工程师。下面是一份 DP sink 的 DPCD 寄存器 dump（VESA DP 2.1a 定义的 DPCD 地址空间）。\n"+
+"请按 DP 2.1a 规范逐项解读，输出**严格 JSON**（不要 markdown 代码块、不要多余文字），schema：\n"+
+'{"dpcd_rev":"","max_link_rate_gbps":0,"max_lanes":0,"link_bandwidth_gbps":0,"enhanced_frame":false,"ssc":false,"coding":["8b/10b"|"128b/132b"],"mst":false,"dsc":false,"dsc_version":"","fec":false,"hdcp13":false,"audio_endpoints":0,"dfp_count":0,"link_training":{"lane0":"ok|not_ready","lane1":"","lane2":"","lane3":"","interlane_align":"done|not_done","in_sync":true},"max_resolution_hint":"","notes":[""]}\n'+
+"规则：只根据 dump 中出现的字节判断；缺失字段填 null；不确定的写进 notes 并标注「未验证」，禁止编造寄存器含义。\n\nDUMP:\n"+txt;
+  function okMsg(){document.getElementById("pmsg").textContent="提示词已复制（含 dump），可贴到任意 AI 助手做深度解读"}
+  function fb(){var ta=document.createElement("textarea");ta.value=p;
+   ta.style.cssText="position:fixed;left:-9999px;top:0";document.body.appendChild(ta);ta.select();
+   var r=false;try{r=document.execCommand("copy")}catch(e){}
+   document.body.removeChild(ta);
+   if(r)okMsg();else document.getElementById("pmsg").textContent="复制失败，请手动选中复制";}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(p).then(okMsg,fb);
+  else fb();
+}
+
+/* ---------- 速查表 ---------- */
+var FOLD=null;        // 折叠状态（null=首次渲染时全部折叠）
+function hl(text,q){
+  var t=esc(text); if(!q) return t;
+  var low=t.toLowerCase(), out="", i=0, j;
+  while((j=low.indexOf(q,i))>=0){
+    out+=t.slice(i,j)+'<mark>'+t.slice(j,j+q.length)+'</mark>';
+    i=j+q.length;
+  }
+  return out+t.slice(i);
+}
+function toggleSec(k){ FOLD[k]=!FOLD[k]; renderFields(); }
+function jumpTo(a){
+  document.getElementById("srch").value=a;
+  renderFields();
+  var host=document.getElementById("fields");
+  host.scrollTop=0;
+  var f=host.querySelector("tr.fldrow");
+  if(f){
+    var rid=f.getAttribute("data-rid");
+    var d=rid?document.getElementById(rid):null;
+    if(d) d.style.display="table-row";
+    f.classList.add("flash");
+    setTimeout(function(){ f.classList.remove("flash"); },1600);
+  }
+  var pf=document.getElementById("panelFields");
+  if(pf) pf.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function renderFields(){
+  if(!FOLD){FOLD={};DPCD_DATA.sections.forEach(function(sec){FOLD[sec[0]]=1;});}
+  var q=(document.getElementById("srch").value||"").trim().toLowerCase();
+  var host=document.getElementById("fields");
+  var D=window.DPCD_DATA||{sections:[],fields:{}};
+  var rows=[], total=0;
+  D.sections.forEach(function(sec){
+    var k=sec[0], secName=sec[1];
+    var fs=(D.fields||{})[k]||[];
+    var shown=[];
+    fs.forEach(function(f){
+      var hay=(f.a+" "+f.n+" "+(f.cn||"")+" "+(f.d||[]).join(" ")).toLowerCase();
+      if(q&&hay.indexOf(q)<0) return;
+      shown.push(f);
+    });
+    if(!shown.length) return;
+    total+=shown.length;
+    var folded=FOLD[k]&&!q;
+    rows.push('<tr class="secrow"><td class="sec sec2" colspan="3" data-k="'+k+'">'
+      +'<span class="arw">'+(folded?'\u25b8':'\u25be')+'</span>'+esc(secName)
+      +'\u3000<span style="font-weight:400;color:#6b7a8c">'+shown.length+' 项</span></td></tr>');
+    if(folded) return;
+    shown.forEach(function(f,idx){
+      var bitstr=(f.b&&f.b.length)?f.b.map(function(b){ return '<span class="bit">['+b[0]+'] '+b[1]+'</span>'; }).join(""):"";
+      var rid='d_'+k+'_'+f.a+'_'+idx;
+      var hasDet=(f.b&&f.b.length)||(f.d&&f.d.length);
+      rows.push('<tr class="fldrow'+(hasDet?'':' noexp')+'"'+(hasDet?(' data-rid="'+rid+'"'):'')+'>'
+        +'<td class="mono" style="white-space:nowrap">'+hl(f.a,q)+'h'+(f.e?(' ~ '+f.e+'h'):'')+'</td>'
+        +'<td><b class="mono">'+hl(f.n,q)+'</b>'+(f.cn?'\u3000<span class="cn">'+hl(f.cn,q)+'</span>':'')+(f.ac?' <span class="hint">'+esc(f.ac)+'</span>':'')
+        +'<div style="margin-top:2px">'+bitstr+'</div></td></tr>');
+      if(!hasDet) return;
+      rows.push('<tr id="'+rid+'" style="display:none"><td></td><td>'
+        +(f.b&&f.b.length?'<div class="hint"><b>位定义 / Bits:</b> '+f.b.map(function(b){ return '['+b[0]+'] <span class="mono">'+b[1]+'</span>'; }).join("；")+'</div>':'')
+        +((f.d&&f.d.length)?'<div class="en" style="margin-top:4px;line-height:1.5"><b>Spec:</b> '+f.d.map(esc).join("<br>")+'</div>':'')
+        +'</td></tr>');
+    });
+  });
+  if(!total) rows.push('<tr><td colspan="3" style="padding:22px;text-align:center;color:#6b7a8c">没有匹配的寄存器。试试更短的关键词，或点上面「清空」。</td></tr>');
+  host.innerHTML='<table><thead><tr><th style="width:150px">地址</th><th>寄存器（spec 原名 + 中文）/ 位定义</th></tr></thead><tbody>'+rows.join("")+'</tbody></table>';
+  var hit=document.getElementById("hit");
+  if(hit) hit.innerHTML=q?('命中 <b>'+total+'</b> 项　点击行看明细'):'点击行展开 spec 位定义与说明';
+}
+/* 解析结果里点地址 → 跳到速查表 */
+(function(){
+  var r=document.getElementById("result");
+  if(!r) return;
+  r.addEventListener("click",function(e){
+    var t=e.target.closest?e.target.closest("a.jump"):null;
+    if(t){ jumpTo(t.getAttribute("data-a")); }
+  });
+})();
+/* 事件委托：分区折叠 + 行展开 */
+(function(){
+  var host=document.getElementById("fields");
+  if(!host) return;
+  host.addEventListener("click",function(e){
+    var td=e.target.closest?e.target.closest("td[data-k]"):null;
+    if(td){ toggleSec(td.getAttribute("data-k")); return; }
+    var tr=e.target.closest?e.target.closest("tr.fldrow"):null;
+    if(tr){
+      var rid=tr.getAttribute("data-rid");
+      var d=rid?document.getElementById(rid):null;
+      if(d) d.style.display=d.style.display==="none"?"table-row":"none";
+    }
+  });
+})();
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+(function(){window.addEventListener('scroll',function(){var b=document.getElementById('totop');if(b)b.style.display=window.scrollY>260?'block':'none'});var D=window.DPCD_DATA||{fields:{}};var n=0;for(var k in D.fields)n+=D.fields[k].length;var el=document.getElementById("tot");if(el)el.textContent=n;})();
+renderFields();
+</script>
+</body></html>
